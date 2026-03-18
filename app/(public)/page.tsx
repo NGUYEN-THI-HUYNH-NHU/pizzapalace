@@ -2,7 +2,10 @@ import getBeverages from "@/actions/get-beverages";
 import getCategories from "@/actions/get-categories";
 import getCombos from "@/actions/get-combos";
 import getPizzas from "@/actions/get-pizzas";
+import Footer from "@/components/footer";
+import Header from "@/components/header";
 import MenuSections from "@/components/menu-sections";
+import Container from "@/components/ui/container";
 import { Category, Product } from "@/type";
 
 const categoryLabelMap: Record<Category, string> = {
@@ -38,7 +41,13 @@ export default async function HomePage() {
 
     return (
         <main className="mx-auto max-w-7xl px-4 pb-12">
-            <MenuSections sections={menuSections} />
+            <Container>
+                <div className="fixed inset-x-0 top-0 z-50 bg-white shadow-sm">
+                    <Header />
+                </div>
+                <MenuSections sections={menuSections} />
+                <Footer />
+            </Container>
         </main>
     );
 }

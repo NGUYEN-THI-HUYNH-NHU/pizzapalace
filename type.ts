@@ -55,9 +55,15 @@ export interface Product {
     pizzaDetails?: PizzaDetails | null;
     drinkDetails?: DrinkDetails | null;
     comboDetails?: ComboDetails | null;
-    tags: string[];
+    tags: ProductTag[];
     createdAt: ISODateString;
     updatedAt: ISODateString;
+}
+
+export interface ProductTag {
+    name: string;
+    code: string;
+    color: string;
 }
 
 export interface PizzaTag {
