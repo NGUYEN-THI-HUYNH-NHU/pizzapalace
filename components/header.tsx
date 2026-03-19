@@ -4,7 +4,7 @@ import Tools from "./tools";
 
 const Header = () => {
     return (
-        <div className="p-3 px-4">
+        <div className="p-3 px-12">
             <div className="grid grid-cols-3">
                 <Address data="12, Nguyen Van Bao, ..." />
                 <div className="flex items-center justify-center">

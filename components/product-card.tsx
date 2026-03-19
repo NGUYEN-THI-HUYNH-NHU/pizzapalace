@@ -6,6 +6,12 @@ type ProductCardProps = {
     product: Product;
 };
 
+const getShortDesc = (desc: string) => {
+    const trimmed = desc.trim();
+
+    return trimmed.length > 40 ? `${trimmed.slice(0, 40)}...` : trimmed;
+};
+
 const formatPrice = (price: number) =>
     new Intl.NumberFormat("vi-VN", {
         style: "currency",
@@ -29,7 +35,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                 <div className="flex flex-1 flex-col justify-between py-2">
                     <div>
                         <h2 className="text-2xl font-semibold text-gray-700">{product.name}</h2>
-                        <p className="line-clamp-2 text-sm text-gray-600 mt-1">{product.desc}</p>
+                        <p className="line-clamp-2 text-sm text-gray-600 mt-1">{getShortDesc(product.desc)}</p>
 
                         {product.tags.length > 0 && (
                             <div className="mt-3 flex flex-wrap gap-2">
@@ -41,12 +47,15 @@ export default function ProductCard({ product }: ProductCardProps) {
                     </div>
 
                     <div>
-                        <span className="text-xs text-gray-500 font-medium">Chỉ từ</span>
-                        <div className="flex items-center justify-between mt-2">
-                            <span className="text-2xl font-bold text-gray-700">{formatPrice(product.price)}</span>
+                        <div className="flex items-end justify-between">
+                            <div className="flex flex-col">
+                                <span className="text-xs text-gray-500 font-medium">Chỉ từ</span>
+                                <span className="text-2xl font-bold text-gray-700">{formatPrice(product.price)}</span>
+                            </div>
+
                             <button type="button" className="hover:scale-110 transition-transform">
                                 <PlusCircle
-                                    className="w-12 h-12 fill-red-700 text-white"
+                                    className="w-14 h-14 fill-yellow-500 text-white"
                                     strokeWidth={1.0}
                                 />
                             </button>
