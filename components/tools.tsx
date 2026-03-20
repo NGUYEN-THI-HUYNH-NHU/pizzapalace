@@ -3,29 +3,41 @@
 import { useEffect, useState } from "react";
 import { Bell, Menu, ShoppingCart } from "lucide-react";
 import Link from "next/link";
-import toast from "react-hot-toast";
+import { useAuth } from "@/hooks/use-auth";
 
 const Tools = () => {
     const [isSignedIn, setIsSignedIn] = useState(false);
+    const { logout } = useAuth();
 
     useEffect(() => {
-        const syncAuthState = () => {
-            setIsSignedIn(Boolean(localStorage.getItem("user")));
+        const syncAuthState = async () => {
+            try {
+                const response = await fetch("/api/auth/session", {
+                    method: "GET",
+                    cache: "no-store",
+                });
+
+                setIsSignedIn(response.ok);
+            } catch {
+                setIsSignedIn(false);
+            }
         };
 
-        syncAuthState();
-        window.addEventListener("storage", syncAuthState);
+        void syncAuthState();
+
+        const handleAuthChanged = () => {
+            void syncAuthState();
+        };
+
+        window.addEventListener("auth-state-changed", handleAuthChanged);
 
         return () => {
-            window.removeEventListener("storage", syncAuthState);
+            window.removeEventListener("auth-state-changed", handleAuthChanged);
         };
     }, []);
 
     const handleLogout = () => {
-        localStorage.removeItem("user");
-        setIsSignedIn(false);
-        toast.success("Bạn đã đăng xuất!");
-        window.location.href = "/";
+        void logout({ onLoggedOut: () => setIsSignedIn(false) });
     };
 
     return (
@@ -54,6 +66,7 @@ const Tools = () => {
                     className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-slate-700 transition-colors hover:bg-gray-50"
                 >
                     <Menu className="h-6 w-6" strokeWidth={2.2} />
+
                 </button>
 
                 <div className="invisible absolute right-0 top-full z-40 mt-2 w-56 translate-y-1 rounded-xl border border-gray-200 bg-white p-1 opacity-0 shadow-lg transition-all duration-200 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">

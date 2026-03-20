@@ -1,11 +1,12 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent } from "react";
 import Link from "next/link";
 import { z } from "zod";
 
 import { Field, FieldContent, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/hooks/use-auth";
 import toast from "react-hot-toast";
 
 const signInSchema = z
@@ -18,12 +19,11 @@ const signInSchema = z
     });
 
 export default function SignInPage() {
-    const [errorMessage, setErrorMessage] = useState("");
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const { signIn, isSigningIn, authError, clearAuthError, setAuthError } = useAuth();
 
     const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        setErrorMessage("");
+        clearAuthError();
 
         const form = e.currentTarget;
 
@@ -34,48 +34,24 @@ export default function SignInPage() {
         });
 
         if (!parsed.success) {
-            setErrorMessage(parsed.error.issues[0]?.message || "Thông tin không hợp lệ.");
+            setAuthError(parsed.error.issues[0]?.message || "Thông tin không hợp lệ.");
             return;
         }
 
-        const authUrl = `${process.env.NEXT_PUBLIC_API_URL}/auth/sign-in`;
-
         const { phone, password } = parsed.data;
 
-        try {
-            setIsSubmitting(true);
+        const isSignedIn = await signIn({ phone, password });
 
-            const response = await fetch(authUrl, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    phone,
-                    password,
-                }),
-            });
-
-            const data = await response.json().catch(() => ({}));
-
-            if (!response.ok) {
-                setErrorMessage(data?.message || "Đăng nhập thất bại.");
-                return;
-            }
-
-            localStorage.setItem("user", JSON.stringify(data));
-            form.reset();
-            toast.success("Đăng nhập thành công!");
-
-            setTimeout(() => {
-                window.location.href = "/";
-            }, 500);
-        } catch (error) {
-            const detail = error instanceof Error ? `${error.message} (${authUrl})` : authUrl;
-            setErrorMessage(`Không thể kết nối máy chủ. Vui lòng thử lại. ${detail}`);
-        } finally {
-            setIsSubmitting(false);
+        if (!isSignedIn) {
+            return;
         }
+
+        form.reset();
+        toast.success("Đăng nhập thành công!");
+
+        setTimeout(() => {
+            window.location.href = "/";
+        }, 500);
     };
 
     return (
@@ -122,14 +98,14 @@ export default function SignInPage() {
                         </Field>
                     </FieldGroup>
 
-                    <FieldError>{errorMessage}</FieldError>
+                    <FieldError>{authError}</FieldError>
 
                     <button
                         type="submit"
-                        disabled={isSubmitting}
+                        disabled={isSigningIn}
                         className="mt-4 h-11 w-full rounded-xl bg-yellow-500 text-sm font-semibold text-white transition hover:bg-yellow-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500/40 disabled:cursor-not-allowed disabled:opacity-70"
                     >
-                        {isSubmitting ? "Đang đăng nhập..." : "Đăng nhập"}
+                        {isSigningIn ? "Đang đăng nhập..." : "Đăng nhập"}
                     </button>
                 </form>
 
