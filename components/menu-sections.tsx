@@ -219,7 +219,7 @@ export default function MenuSections({ sections }: MenuSectionsProps) {
                                     key={section.title}
                                     href={`#${sectionId}`}
                                     className={`uppercase whitespace-nowrap border-b-2 px-6 py-2 text-lg font-medium ${isActive
-                                        ? "border-yellow-500 text-yellow-500"
+                                        ? "border-yellow-500 border-b-2 rounded-full text-yellow-500"
                                         : "border-transparent text-muted-foreground"
                                         }`}
                                     onClick={(event) => {

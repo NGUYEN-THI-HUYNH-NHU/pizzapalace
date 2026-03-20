@@ -1,7 +1,33 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { Bell, Menu, ShoppingCart } from "lucide-react";
 import Link from "next/link";
+import toast from "react-hot-toast";
 
 const Tools = () => {
+    const [isSignedIn, setIsSignedIn] = useState(false);
+
+    useEffect(() => {
+        const syncAuthState = () => {
+            setIsSignedIn(Boolean(localStorage.getItem("user")));
+        };
+
+        syncAuthState();
+        window.addEventListener("storage", syncAuthState);
+
+        return () => {
+            window.removeEventListener("storage", syncAuthState);
+        };
+    }, []);
+
+    const handleLogout = () => {
+        localStorage.removeItem("user");
+        setIsSignedIn(false);
+        toast.success("Bạn đã đăng xuất!");
+        window.location.href = "/";
+    };
+
     return (
         <div className="flex items-center gap-3">
             <button
@@ -38,19 +64,34 @@ const Tools = () => {
                         Theo dõi đơn hàng
                     </Link>
 
-                    <Link
-                        href="/profile"
-                        className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-gray-100"
-                    >
-                        Hồ sơ của tôi
-                    </Link>
-
-                    <button
-                        type="button"
-                        className="block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-red-700 transition-colors hover:bg-red-50"
-                    >
-                        Đăng xuất
-                    </button>
+                    {isSignedIn ? (
+                        <>
+                            <Link
+                                href="/profile"
+                                className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-gray-100"
+                            >
+                                Hồ sơ của tôi
+                            </Link>
+                            <hr />
+                            <button
+                                type="button"
+                                onClick={handleLogout}
+                                className="block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-yellow-600 transition-colors hover:bg-red-50"
+                            >
+                                Đăng xuất
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <hr />
+                            <Link
+                                href="/auth/sign-in"
+                                className="block rounded-lg px-3 py-2 text-sm font-medium text-yellow-600 transition-colors hover:bg-gray-100"
+                            >
+                                Đăng nhập
+                            </Link>
+                        </>
+                    )}
                 </div>
             </div>
         </div>
