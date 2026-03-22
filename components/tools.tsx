@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import { Bell, Menu, ShoppingCart } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
+import { useCart } from "@/contexts/cart-context";
 
 const Tools = () => {
     const [isSignedIn, setIsSignedIn] = useState(false);
     const { logout } = useAuth();
+    const { cartItems } = useCart();
 
     useEffect(() => {
         const syncAuthState = async () => {
@@ -18,7 +20,7 @@ const Tools = () => {
                 });
 
                 setIsSignedIn(response.ok);
-            } catch {
+            } catch (error) {
                 setIsSignedIn(false);
             }
         };
@@ -55,7 +57,9 @@ const Tools = () => {
                 aria-label="Gio hang"
                 className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-slate-700 transition-colors hover:bg-gray-50"
             >
-                <span className="text-xl font-semibold leading-none">0</span>
+                <span className="text-xl font-semibold leading-none">
+                    {cartItems.reduce((sum, item) => sum + item.quantity, 0)}
+                </span>
                 <ShoppingCart className="h-6 w-6" strokeWidth={2} />
             </Link>
 

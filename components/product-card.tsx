@@ -1,6 +1,10 @@
+'use client';
+
 import { Product } from "@/type";
 import { PlusCircle } from "lucide-react";
 import Tag from "./ui/tag";
+import { useCart } from "@/contexts/cart-context";
+import toast from "react-hot-toast";
 
 type ProductCardProps = {
     product: Product;
@@ -20,6 +24,19 @@ const formatPrice = (price: number) =>
     }).format(price);
 
 export default function ProductCard({ product }: ProductCardProps) {
+    const { addToCart } = useCart();
+
+    const handleAddToCart = () => {
+        addToCart({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            image: product.img || '🍕',
+            description: product.desc
+        });
+        toast.success(`${product.name} đã được thêm vào giỏ hàng!`);
+    };
+
     return (
         <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden hover:shadow-xl transition-shadow">
             <div className="flex gap-4 p-4">
@@ -53,7 +70,11 @@ export default function ProductCard({ product }: ProductCardProps) {
                                 <span className="text-2xl font-bold text-gray-700">{formatPrice(product.price)}</span>
                             </div>
 
-                            <button type="button" className="hover:scale-110 transition-transform">
+                            <button 
+                                type="button" 
+                                className="hover:scale-110 transition-transform"
+                                onClick={handleAddToCart}
+                            >
                                 <PlusCircle
                                     className="w-14 h-14 fill-yellow-500 text-white"
                                     strokeWidth={1.0}
