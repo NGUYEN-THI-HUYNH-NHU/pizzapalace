@@ -153,7 +153,7 @@ export default function MenuSections({ sections }: MenuSectionsProps) {
     }, [normalizedKeyword, sections]);
 
     const sectionIds = useMemo(
-        () => filteredSections.map((section) => `${slugify(section.title)}-section`),
+        () => filteredSections.map((section) => `${slugify(section.title)}`),
         [filteredSections]
     );
 

@@ -4,11 +4,8 @@ import { useEffect, useState } from "react";
 import { Bell, Menu, ShoppingCart } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
-<<<<<<< HEAD
 import Image from "next/image";
-=======
 import { useCart } from "@/contexts/cart-context";
->>>>>>> main
 
 const Tools = () => {
     const [isSignedIn, setIsSignedIn] = useState(false);
