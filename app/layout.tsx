@@ -26,12 +26,12 @@ export default function RootLayout({
 			<body className={`${inter.className} bg-white`}>
 				<ToasterProvider />
 				<Container>
-					<div className="fixed inset-x-0 top-0 z-50 bg-white">
+					<div className="sticky top-0 z-50 bg-white">
 						<Header />
 					</div>
-					<div className="top-18 mt-4">
+					<main>
 						{children}
-					</div>
+					</main>
 					<Footer />
 				</Container>
 			</body>

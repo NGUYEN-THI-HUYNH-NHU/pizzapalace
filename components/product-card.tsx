@@ -32,7 +32,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                     ) : null}
                 </div>
 
-                <div className="flex flex-1 flex-col justify-between py-2">
+                <div className="flex flex-1 flex-col justify-between">
                     <div>
                         <h2 className="text-2xl font-semibold text-gray-700">{product.name}</h2>
                         <p className="line-clamp-2 text-sm text-gray-600 mt-1">{getShortDesc(product.desc)}</p>

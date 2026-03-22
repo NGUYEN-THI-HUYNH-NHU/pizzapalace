@@ -15,16 +15,6 @@ type LogoutOptions = {
     onLoggedOut?: () => void;
 };
 
-const buildSignInUrl = () => {
-    const apiBase = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
-
-    if (!apiBase) {
-        return null;
-    }
-
-    return apiBase.endsWith("/api") ? `${apiBase}/auth/sign-in` : `${apiBase}/api/auth/sign-in`;
-};
-
 export const useAuth = () => {
     const router = useRouter();
     const [isSigningIn, setIsSigningIn] = useState(false);
@@ -39,12 +29,7 @@ export const useAuth = () => {
         async ({ phone, password }: SignInInput) => {
             clearAuthError();
 
-            const signInUrl = buildSignInUrl();
-
-            if (!signInUrl) {
-                setAuthError("Thiếu cấu hình NEXT_PUBLIC_API_URL.");
-                return false;
-            }
+            const signInUrl = `${process.env.NEXT_PUBLIC_API_URL}/auth/sign-in`;
 
             setIsSigningIn(true);
             try {

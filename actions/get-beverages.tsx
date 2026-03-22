@@ -1,15 +1,8 @@
 import { Category, Product } from "@/type";
 
-const apiBase = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
-const URL = apiBase.endsWith("/api")
-    ? `${apiBase}/beverages`
-    : `${apiBase}/api/beverages`;
+const URL = `${process.env.NEXT_PUBLIC_API_URL}/beverages`;
 
 const getBeverages = async (category?: Category): Promise<Product[]> => {
-    if (!apiBase) {
-        return [];
-    }
-
     const requestUrl = category ? `${URL}?category=${category}` : URL;
     const res = await fetch(requestUrl, { cache: "no-store" });
 
