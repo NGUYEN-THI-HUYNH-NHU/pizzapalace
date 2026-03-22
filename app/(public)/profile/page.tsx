@@ -65,12 +65,12 @@ const ProfilePage = () => {
     }
 
     return (
-        <div className="mt-28 px-4 py-10">
+        <div className="px-4 py-4">
             <div className="grid grid-cols-1 md:grid-cols-3 md:gap-6 p-4">
-                <div className="col-span-1">
+                <div className="col-span-1 rounded-2xl border shadow h-fit py-2 mb-6">
                     <Link
                         href="/profile/change-password"
-                        className="flex items-center gap-2 mb-4 w-full rounded-xl border shadow p-3 transition hover:bg-gray-50"
+                        className="flex items-center gap-2 w-full p-3 transition hover:bg-gray-50"
                     >
                         <KeySquareIcon className="h-4 w-4" />
                         Đổi mật khẩu
@@ -79,7 +79,7 @@ const ProfilePage = () => {
                     <button
                         type="button"
                         onClick={handleLogout}
-                        className="flex items-center gap-2  mb-4 w-full rounded-xl border shadow p-3 transition hover:bg-gray-50"
+                        className="flex items-center gap-2 w-full p-3 transition hover:bg-gray-50"
                     >
                         <LogOut className="h-4 w-4" />
                         Đăng xuất

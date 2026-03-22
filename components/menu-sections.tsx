@@ -37,6 +37,93 @@ export default function MenuSections({ sections }: MenuSectionsProps) {
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [searchKeyword, setSearchKeyword] = useState("");
     const searchInputRef = useRef<HTMLInputElement | null>(null);
+    const animationFrameRef = useRef<number | null>(null);
+    const isNavLockedRef = useRef(false);
+    const lockedSectionIdRef = useRef("");
+
+    const stickyOffset = 170;
+
+    const updateHashWithoutPush = (sectionId: string) => {
+        if (typeof window === "undefined") {
+            return;
+        }
+
+        const nextHash = `#${sectionId}`;
+        if (window.location.hash === nextHash) {
+            return;
+        }
+
+        window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}${nextHash}`);
+    };
+
+    const scrollToSection = (sectionId: string, behavior: ScrollBehavior = "auto") => {
+        const target = document.getElementById(sectionId);
+        if (!target) {
+            return;
+        }
+
+        const targetTop = target.getBoundingClientRect().top + window.scrollY - stickyOffset;
+        window.scrollTo({ top: Math.max(targetTop, 0), behavior });
+    };
+
+    const stopFastScrollAnimation = () => {
+        if (animationFrameRef.current !== null) {
+            window.cancelAnimationFrame(animationFrameRef.current);
+            animationFrameRef.current = null;
+        }
+        isNavLockedRef.current = false;
+    };
+
+    const fastScrollToSection = (sectionId: string) => {
+        const target = document.getElementById(sectionId);
+        if (!target) {
+            return;
+        }
+
+        stopFastScrollAnimation();
+
+        const startY = window.scrollY;
+        const endY = Math.max(target.getBoundingClientRect().top + window.scrollY - stickyOffset, 0);
+        const distance = endY - startY;
+        const distanceAbs = Math.abs(distance);
+
+        if (distanceAbs < 2) {
+            return;
+        }
+
+        // Car-like timing
+        const duration = Math.min(1100, Math.max(260, 220 + Math.sqrt(distanceAbs) * 20));
+        let startedAt: number | null = null;
+        isNavLockedRef.current = true;
+        lockedSectionIdRef.current = sectionId;
+
+        const step = (timestamp: number) => {
+            if (startedAt === null) {
+                startedAt = timestamp;
+            }
+
+            const elapsed = timestamp - startedAt;
+            const progress = Math.min(elapsed / duration, 1);
+            // Ease-in-out quintic for a clear accelerate -> decelerate motion profile.
+            const easedProgress = progress < 0.5
+                ? 16 * Math.pow(progress, 5)
+                : 1 - Math.pow(-2 * progress + 2, 5) / 2;
+            const nextY = startY + distance * easedProgress;
+
+            window.scrollTo({ top: nextY, behavior: "auto" });
+
+            if (progress < 1) {
+                animationFrameRef.current = window.requestAnimationFrame(step);
+                return;
+            }
+
+            animationFrameRef.current = null;
+            isNavLockedRef.current = false;
+            window.scrollTo({ top: endY, behavior: "auto" });
+        };
+
+        animationFrameRef.current = window.requestAnimationFrame(step);
+    };
 
     const normalizedKeyword = useMemo(() => normalizeForSearch(searchKeyword), [searchKeyword]);
 
@@ -79,6 +166,12 @@ export default function MenuSections({ sections }: MenuSectionsProps) {
     }, [isSearchOpen]);
 
     useEffect(() => {
+        return () => {
+            stopFastScrollAnimation();
+        };
+    }, []);
+
+    useEffect(() => {
         const elements = sectionIds
             .map((id) => document.getElementById(id))
             .filter((element): element is HTMLElement => Boolean(element));
@@ -87,9 +180,15 @@ export default function MenuSections({ sections }: MenuSectionsProps) {
             return;
         }
 
-        const stickyOffset = 170;
-
         const updateActiveSection = () => {
+            if (isNavLockedRef.current && lockedSectionIdRef.current) {
+                const lockedSectionId = lockedSectionIdRef.current;
+                setActiveSection((current) => (current === lockedSectionId ? current : lockedSectionId));
+                return;
+            }
+
+            lockedSectionIdRef.current = "";
+
             let nextActiveId = elements[0].id;
 
             for (const element of elements) {
@@ -102,7 +201,14 @@ export default function MenuSections({ sections }: MenuSectionsProps) {
                 }
             }
 
-            setActiveSection((current) => (current === nextActiveId ? current : nextActiveId));
+            setActiveSection((current) => {
+                if (current === nextActiveId) {
+                    return current;
+                }
+
+                updateHashWithoutPush(nextActiveId);
+                return nextActiveId;
+            });
         };
 
         updateActiveSection();
@@ -116,6 +222,26 @@ export default function MenuSections({ sections }: MenuSectionsProps) {
         };
     }, [sectionIds]);
 
+    useEffect(() => {
+        if (sectionIds.length === 0 || typeof window === "undefined") {
+            return;
+        }
+
+        const hashedId = decodeURIComponent(window.location.hash.replace("#", ""));
+        if (!hashedId || !sectionIds.includes(hashedId)) {
+            return;
+        }
+
+        const frameId = window.requestAnimationFrame(() => {
+            setActiveSection(hashedId);
+            scrollToSection(hashedId);
+        });
+
+        return () => {
+            window.cancelAnimationFrame(frameId);
+        };
+    }, [sectionIds]);
+
     if (sections.length === 0) {
         return <p className="text-sm text-muted-foreground">Chưa tải được sản phẩm từ API.</p>;
     }
@@ -123,7 +249,7 @@ export default function MenuSections({ sections }: MenuSectionsProps) {
     if (filteredSections.length === 0) {
         return (
             <div>
-                <section className="sticky top-18 z-30 mt-4 bg-white pb-3">
+                <section className="sticky top-18 z-30 bg-white py-3">
                     <div className="flex items-center gap-3">
                         <button
                             type="button"
@@ -170,7 +296,7 @@ export default function MenuSections({ sections }: MenuSectionsProps) {
 
     return (
         <div>
-            <section className="sticky top-18 z-30 mt-4 bg-white pb-3">
+            <section className="sticky top-18 z-30 bg-white py-3">
                 <div className="flex items-center gap-3">
                     <button
                         type="button"
@@ -224,11 +350,10 @@ export default function MenuSections({ sections }: MenuSectionsProps) {
                                         }`}
                                     onClick={(event) => {
                                         event.preventDefault();
-                                        const target = document.getElementById(sectionId);
-                                        if (target) {
-                                            target.scrollIntoView({ behavior: "smooth", block: "start" });
-                                            setActiveSection(sectionId);
-                                        }
+                                        setActiveSection(sectionId);
+                                        lockedSectionIdRef.current = sectionId;
+                                        updateHashWithoutPush(sectionId);
+                                        fastScrollToSection(sectionId);
                                     }}
                                 >
                                     {section.title}
@@ -239,18 +364,23 @@ export default function MenuSections({ sections }: MenuSectionsProps) {
                 </div>
             </section>
 
-            <section className="mt-16 space-y-8">
+            <section>
                 {filteredSections.map((section, index) => (
                     <div key={section.title} id={sectionIds[index]} className="scroll-mt-36">
-                        <h2 className="mb-4 text-2xl font-bold uppercase">{section.title}</h2>
+                        <div className="mt-8 mb-4 flex items-center gap-4">
+                            <span className="h-px flex-1 bg-slate-200" />
+                            <h2 className="shrink-0 text-center text-2xl font-bold uppercase">{section.title}</h2>
+                            <span className="h-px flex-1 bg-slate-200" />
+                        </div>
                         <div className="grid gap-5 md:grid-cols-2">
                             {section.items.map((item) => (
                                 <ProductCard key={item.id} product={item} />
                             ))}
                         </div>
                     </div>
-                ))}
-            </section>
+                ))
+                }
+            </section >
         </div >
     );
 }
