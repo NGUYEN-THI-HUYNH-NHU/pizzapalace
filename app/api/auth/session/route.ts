@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     }
 
     const response = NextResponse.json(body, { status: 200 });
-    response.cookies.set(buildSessionCookie(body));
+    response.cookies.set(await buildSessionCookie(body));
 
     return response;
 }
@@ -49,7 +49,7 @@ export async function PATCH(request: NextRequest) {
     };
 
     const response = NextResponse.json(mergedUser, { status: 200 });
-    response.cookies.set(buildSessionCookie(mergedUser));
+    response.cookies.set(await buildSessionCookie(mergedUser));
 
     return response;
 }

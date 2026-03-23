@@ -30,7 +30,7 @@ export const useProfile = () => {
     const hydrateProfile = useCallback(async () => {
         setIsHydrating(true);
         try {
-            const response = await fetch("/api/auth/session", {
+            const response = await fetch("/api/profile", {
                 method: "GET",
                 cache: "no-store",
             });
