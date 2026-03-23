@@ -29,7 +29,7 @@ export const useAuth = () => {
         async ({ phone, password }: SignInInput) => {
             clearAuthError();
 
-            const signInUrl = `${process.env.NEXT_PUBLIC_API_URL}/auth/sign-in`;
+            const signInUrl = "/api/auth/sign-in";
 
             setIsSigningIn(true);
             try {
@@ -69,6 +69,9 @@ export const useAuth = () => {
                     return false;
                 }
 
+                window.dispatchEvent(new Event("auth-state-changed"));
+                router.refresh();
+
                 return true;
             } catch (error) {
                 const detail = error instanceof Error ? `${error.message} (${signInUrl})` : signInUrl;
@@ -78,7 +81,7 @@ export const useAuth = () => {
                 setIsSigningIn(false);
             }
         },
-        [clearAuthError]
+        [clearAuthError, router]
     );
 
     const logout = useCallback(
@@ -89,7 +92,6 @@ export const useAuth = () => {
             try {
                 await fetch("/api/auth/session", { method: "DELETE" });
             } catch {
-                // Continue local logout flow when request fails.
             } finally {
                 setIsLoggingOut(false);
             }

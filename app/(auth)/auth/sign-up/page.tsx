@@ -1,12 +1,13 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, KeyboardEvent, useRef, useState } from "react";
 import Link from "next/link";
 import { z } from "zod";
 
 import { Field, FieldContent, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
 
 const signUpSchema = z
     .object({
@@ -26,28 +27,135 @@ const signUpSchema = z
 export default function SignUpPage() {
     const [errorMessage, setErrorMessage] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [values, setValues] = useState({
+        fullName: "",
+        phone: "",
+        password: "",
+        confirmPassword: "",
+    });
+    const [fieldErrors, setFieldErrors] = useState<Record<keyof typeof values, string>>({
+        fullName: "",
+        phone: "",
+        password: "",
+        confirmPassword: "",
+    });
+    const router = useRouter();
+
+    const fullNameRef = useRef<HTMLInputElement>(null);
+    const phoneRef = useRef<HTMLInputElement>(null);
+    const passwordRef = useRef<HTMLInputElement>(null);
+    const confirmPasswordRef = useRef<HTMLInputElement>(null);
+    const formRef = useRef<HTMLFormElement>(null);
+
+    const validateField = (
+        field: keyof typeof values,
+        currentValues: typeof values
+    ) => {
+        switch (field) {
+            case "fullName":
+                return currentValues.fullName.trim().length > 0 ? "" : "Họ tên không được để trống.";
+            case "phone":
+                return /^(0|\+84)\d{9,10}$/.test(currentValues.phone.trim())
+                    ? ""
+                    : "Số điện thoại không hợp lệ.";
+            case "password":
+                return currentValues.password.length >= 8
+                    ? ""
+                    : "Mật khẩu phải có ít nhất 8 ký tự.";
+            case "confirmPassword":
+                if (currentValues.confirmPassword.length < 8) {
+                    return "Mật khẩu xác nhận phải có ít nhất 8 ký tự.";
+                }
+                if (currentValues.password !== currentValues.confirmPassword) {
+                    return "Mật khẩu xác nhận không khớp.";
+                }
+                return "";
+            default:
+                return "";
+        }
+    };
+
+    const updateValue = (field: keyof typeof values, value: string) => {
+        setValues((prev) => {
+            const nextValues = {
+                ...prev,
+                [field]: value,
+            };
+
+            setFieldErrors((prevErrors) => ({
+                ...prevErrors,
+                [field]: validateField(field, nextValues),
+                ...(field === "password"
+                    ? {
+                        confirmPassword:
+                            nextValues.confirmPassword.length > 0
+                                ? validateField("confirmPassword", nextValues)
+                                : "",
+                    }
+                    : {}),
+            }));
+
+            return nextValues;
+        });
+    };
+
+    const handleEnterKey = (
+        e: KeyboardEvent<HTMLInputElement>,
+        field: keyof typeof values,
+        nextFieldRef?: React.RefObject<HTMLInputElement | null>
+    ) => {
+        if (e.key !== "Enter") {
+            return;
+        }
+
+        e.preventDefault();
+
+        const fieldError = validateField(field, values);
+
+        setFieldErrors((prev) => ({
+            ...prev,
+            [field]: fieldError,
+        }));
+
+        if (fieldError) {
+            return;
+        }
+
+        if (nextFieldRef?.current) {
+            nextFieldRef.current.focus();
+            return;
+        }
+
+        formRef.current?.requestSubmit();
+    };
 
     const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setErrorMessage("");
 
-        const form = e.currentTarget;
-
-        const formData = new FormData(form);
-        const parsed = signUpSchema.safeParse({
-            fullName: String(formData.get("fullName") || ""),
-            phone: String(formData.get("phone") || ""),
-            password: String(formData.get("password") || ""),
-            confirmPassword: String(formData.get("confirmPassword") || ""),
-        });
+        const parsed = signUpSchema.safeParse(values);
 
         if (!parsed.success) {
+            const nextFieldErrors: Record<keyof typeof values, string> = {
+                fullName: "",
+                phone: "",
+                password: "",
+                confirmPassword: "",
+            };
+
+            for (const issue of parsed.error.issues) {
+                const key = issue.path[0] as keyof typeof values | undefined;
+                if (key && !nextFieldErrors[key]) {
+                    nextFieldErrors[key] = issue.message;
+                }
+            }
+
+            setFieldErrors(nextFieldErrors);
             setErrorMessage(parsed.error.issues[0]?.message || "Thông tin không hợp lệ.");
             return;
         }
 
-
-        const usersUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/users`;
+        const usersUrl = "/api/auth/sign-up";
 
         const { fullName, phone, password } = parsed.data;
 
@@ -73,8 +181,20 @@ export default function SignUpPage() {
                 return;
             }
 
-            form.reset();
+            setValues({
+                fullName: "",
+                phone: "",
+                password: "",
+                confirmPassword: "",
+            });
+            setFieldErrors({
+                fullName: "",
+                phone: "",
+                password: "",
+                confirmPassword: "",
+            });
             toast.success("Tạo tài khoản thành công! Bạn có thể đăng nhập ngay.");
+            router.push('/auth/sign-in');
         } catch {
             setErrorMessage("Không thể kết nối máy chủ. Vui lòng thử lại.");
         } finally {
@@ -90,64 +210,88 @@ export default function SignUpPage() {
                     Điền thông tin bên dưới để đăng ký và theo dõi đơn hàng nhanh hơn.
                 </p>
 
-                <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
+                <form ref={formRef} className="mt-6 space-y-5" onSubmit={handleSubmit}>
                     <FieldGroup>
-                        <Field>
+                        <Field data-invalid={!!fieldErrors.fullName}>
                             <FieldLabel htmlFor="fullName">Họ tên</FieldLabel>
                             <FieldContent>
                                 <Input
+                                    ref={fullNameRef}
                                     id="fullName"
                                     name="fullName"
                                     type="text"
                                     autoComplete="name"
                                     placeholder="Nhập họ và tên"
+                                    value={values.fullName}
+                                    onChange={(e) => updateValue("fullName", e.target.value)}
+                                    onKeyDown={(e) => handleEnterKey(e, "fullName", phoneRef)}
+                                    aria-invalid={!!fieldErrors.fullName}
                                     className="h-11 rounded-xl border-yellow-200 bg-white px-3 text-slate-800 focus-visible:border-yellow-500 focus-visible:ring-yellow-500/30"
                                 />
+                                <FieldError>{fieldErrors.fullName}</FieldError>
                             </FieldContent>
                         </Field>
 
-                        <Field>
+                        <Field data-invalid={!!fieldErrors.phone}>
                             <FieldLabel htmlFor="phone">Số điện thoại</FieldLabel>
                             <FieldContent>
                                 <Input
+                                    ref={phoneRef}
                                     id="phone"
                                     name="phone"
                                     type="tel"
                                     autoComplete="tel"
                                     inputMode="numeric"
                                     placeholder="Ví dụ: 0987654321"
+                                    value={values.phone}
+                                    onChange={(e) => updateValue("phone", e.target.value)}
+                                    onKeyDown={(e) => handleEnterKey(e, "phone", passwordRef)}
+                                    aria-invalid={!!fieldErrors.phone}
                                     className="h-11 rounded-xl border-yellow-200 bg-white px-3 text-slate-800 focus-visible:border-yellow-500 focus-visible:ring-yellow-500/30"
                                 />
+                                <FieldError>{fieldErrors.phone}</FieldError>
                             </FieldContent>
                         </Field>
 
-                        <Field>
+                        <Field data-invalid={!!fieldErrors.password}>
                             <FieldLabel htmlFor="password">Mật khẩu</FieldLabel>
                             <FieldContent>
                                 <Input
+                                    ref={passwordRef}
                                     id="password"
                                     name="password"
                                     type="password"
                                     autoComplete="new-password"
                                     placeholder="Nhập mật khẩu"
+                                    value={values.password}
+                                    onChange={(e) => updateValue("password", e.target.value)}
+                                    onKeyDown={(e) => handleEnterKey(e, "password", confirmPasswordRef)}
+                                    aria-invalid={!!fieldErrors.password}
                                     className="h-11 rounded-xl border-yellow-200 bg-white px-3 text-slate-800 focus-visible:border-yellow-500 focus-visible:ring-yellow-500/30"
                                     minLength={8}
                                 />
+                                <FieldError>{fieldErrors.password}</FieldError>
                             </FieldContent>
                         </Field>
 
-                        <Field>
+                        <Field data-invalid={!!fieldErrors.confirmPassword}>
                             <FieldLabel htmlFor="confirmPassword">Xác nhận mật khẩu</FieldLabel>
                             <FieldContent>
                                 <Input
+                                    ref={confirmPasswordRef}
                                     id="confirmPassword"
                                     name="confirmPassword"
                                     type="password"
                                     autoComplete="new-password"
                                     placeholder="Nhập lại mật khẩu"
+                                    value={values.confirmPassword}
+                                    onChange={(e) => updateValue("confirmPassword", e.target.value)}
+                                    onKeyDown={(e) => handleEnterKey(e, "confirmPassword")}
+                                    aria-invalid={!!fieldErrors.confirmPassword}
                                     className="h-11 rounded-xl border-yellow-200 bg-white px-3 text-slate-800 focus-visible:border-yellow-500 focus-visible:ring-yellow-500/30"
                                     minLength={8}
                                 />
+                                <FieldError>{fieldErrors.confirmPassword}</FieldError>
                             </FieldContent>
                         </Field>
                     </FieldGroup>

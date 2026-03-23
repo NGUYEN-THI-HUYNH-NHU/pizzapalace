@@ -31,7 +31,6 @@ export enum PaymentMethod {
 export interface User {
     id: Id;
     name?: string | null;
-    email?: string | null;
     phone?: string | null;
     address?: string | null;
     hashedPassword?: string | null;

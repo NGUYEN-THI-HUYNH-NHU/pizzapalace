@@ -8,6 +8,7 @@ import { Field, FieldContent, FieldError, FieldGroup, FieldLabel } from "@/compo
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
 import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
 
 const signInSchema = z
     .object({
@@ -20,6 +21,7 @@ const signInSchema = z
 
 export default function SignInPage() {
     const { signIn, isSigningIn, authError, clearAuthError, setAuthError } = useAuth();
+    const router = useRouter();
 
     const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -49,9 +51,8 @@ export default function SignInPage() {
         form.reset();
         toast.success("Đăng nhập thành công!");
 
-        setTimeout(() => {
-            window.location.href = "/";
-        }, 500);
+        router.push('/');
+        router.refresh();
     };
 
     return (
@@ -111,7 +112,7 @@ export default function SignInPage() {
 
                 <p className="mt-5 text-center text-sm text-slate-600">
                     Bạn chưa có tài khoản?{" "}
-                    <Link href="/sign-up" className="font-semibold text-yellow-500 hover:text-yellow-600">
+                    <Link href="/auth/sign-up" className="font-semibold text-yellow-500 hover:text-yellow-600">
                         Đăng ký
                     </Link>
                 </p>
