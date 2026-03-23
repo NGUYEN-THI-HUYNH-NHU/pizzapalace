@@ -83,7 +83,7 @@ const Tools = () => {
                             width={12}
                             height={12}
                             priority
-                            className="h-4 w-auto"
+                            className="h-5 w-auto"
                         />
                     }
                 </button>
@@ -121,6 +121,12 @@ const Tools = () => {
                                 className="block rounded-lg px-3 py-2 text-sm font-medium text-yellow-600 transition-colors hover:bg-gray-100"
                             >
                                 Đăng nhập
+                            </Link>
+                            <Link
+                                href="/auth/sign-up"
+                                className="block rounded-lg px-3 py-2 text-sm font-medium text-yellow-600 transition-colors hover:bg-gray-100"
+                            >
+                                Đăng ký
                             </Link>
                         </>
                     )}

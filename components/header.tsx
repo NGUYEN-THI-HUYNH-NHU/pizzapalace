@@ -2,10 +2,11 @@
 
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { usePathname } from "next/navigation";
 import Address from "./address";
 import Tools from "./tools";
+import { useProfile } from "@/hooks/use-profile";
 
 const PAGE_NAME_MAP: Record<string, string> = {
     "/auth/sign-in": "ĐĂNG NHẬP",
@@ -20,6 +21,21 @@ const PAGE_NAME_MAP: Record<string, string> = {
 const Header = () => {
     const pathname = usePathname();
     const isHome = pathname === "/";
+    const { user, hydrateProfile } = useProfile();
+
+    useEffect(() => {
+        void hydrateProfile();
+
+        const handleAuthChanged = () => {
+            void hydrateProfile();
+        };
+
+        window.addEventListener("auth-state-changed", handleAuthChanged);
+
+        return () => {
+            window.removeEventListener("auth-state-changed", handleAuthChanged);
+        };
+    }, [hydrateProfile]);
 
     const currentPageName = useMemo(() => {
         if (isHome) {
@@ -42,7 +58,7 @@ const Header = () => {
         <div className="py-3">
             <div className="grid grid-cols-3">
                 <div className="flex items-center gap-3">
-                    <Address data="12, Nguyen Van Bao, ..." />
+                    <Address data={user?.address} />
                 </div>
 
                 <div className="flex flex-col items-center justify-center">

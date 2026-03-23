@@ -1,5 +1,5 @@
 interface AddressProps {
-    data: string
+    data?: string | null;
 }
 
 const Address: React.FC<AddressProps> = ({
@@ -10,7 +10,7 @@ const Address: React.FC<AddressProps> = ({
             <p className="text-gray-500">
                 Giao hàng tới:
             </p>
-            {data}
+            <p>{data || "Chưa có địa chỉ"}</p>
         </div>
     );
 }
