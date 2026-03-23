@@ -147,7 +147,7 @@ const ProfilePage = () => {
                             type="button"
                             onClick={handlePrimaryAction}
                             disabled={isLoading}
-                            className="h-11 w-full rounded-xl bg-yellow-500 text-sm font-semibold text-white cursor-pointer transition hover:bg-yellow-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500/40 disabled:cursor-not-allowed disabled:opacity-70"
+                            className="mt-4 h-11 w-full rounded-xl bg-yellow-500 text-sm font-semibold text-white transition hover:bg-yellow-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500/40 disabled:cursor-not-allowed disabled:opacity-70"
                         >
                             {isEditing ? (isLoading ? "Đang cập nhật..." : "Lưu thay đổi") : "Chỉnh sửa"}
                         </button>

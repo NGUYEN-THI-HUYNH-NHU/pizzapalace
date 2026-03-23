@@ -372,7 +372,7 @@ export default function MenuSections({ sections }: MenuSectionsProps) {
                             <h2 className="shrink-0 text-center text-2xl font-bold uppercase">{section.title}</h2>
                             <span className="h-px flex-1 bg-slate-200" />
                         </div>
-                        <div className="grid gap-5 md:grid-cols-2">
+                        <div className="grid gap-5 lg:grid-cols-2">
                             {section.items.map((item) => (
                                 <ProductCard key={item.id} product={item} />
                             ))}
