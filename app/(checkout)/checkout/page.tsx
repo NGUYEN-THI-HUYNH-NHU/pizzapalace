@@ -190,7 +190,7 @@ export default function CheckoutPage() {
             <div className="mt-2 text-sm text-gray-500 flex justify-end items-center gap-1">
               <span>Nhận</span>
               <span className="font-semibold text-black">11 điểm</span>
-              <span>Hut rewards</span>
+              <span>PizzaPalace rewards</span>
             </div>
           </div>
 
@@ -204,7 +204,7 @@ export default function CheckoutPage() {
                 onChange={(e) => setAgreedToTerms(e.target.checked)}
               />
               <span className="text-sm text-black leading-relaxed font-normal">
-                Tôi đồng ý với <a href="#" className="text-red-600 underline">các điều khoản và điều kiện</a> và tham gia <a href="#" className="text-red-600 underline">chương trình thành viên Hut Rewards</a> để tích điểm và hưởng quyền lợi theo quy định của chương trình.
+                Tôi đồng ý với <a href="#" className="text-red-600 underline">các điều khoản và điều kiện</a> và tham gia <a href="#" className="text-red-600 underline">chương trình thành viên PizzaPalace Rewards</a> để tích điểm và hưởng quyền lợi theo quy định của chương trình.
               </span>
             </label>
           </div>
