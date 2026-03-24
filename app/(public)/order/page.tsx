@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { currencyFormatter } from "@/lib/utils";
+import { currencyFormatter, formatDateTime } from "@/lib/utils";
 import { Order, OrderStatus, PaymentMethod } from "@/type";
 
 const STATUS_STEPS = [
@@ -8,6 +8,10 @@ const STATUS_STEPS = [
     OrderStatus.DELIVERING,
     OrderStatus.COMPLETED,
 ] as const;
+
+type StatusStep = (typeof STATUS_STEPS)[number];
+const TRACK_LEFT_PERCENT = 12.5;
+const TRACK_WIDTH_PERCENT = 75;
 
 const STATUS_LABEL: Record<OrderStatus, string> = {
     [OrderStatus.PENDING]: "Đã tiếp nhận",
@@ -140,30 +144,28 @@ const MOCK_ORDERS: Order[] = [
     },
 ];
 
-const formatDateTime = (iso: string) =>
-    new Date(iso).toLocaleString("vi-VN", {
-        hour: "2-digit",
-        minute: "2-digit",
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-    });
+const getStepIndex = (status: StatusStep) => STATUS_STEPS.indexOf(status);
 
 const getProgressPercent = (status: OrderStatus) => {
-    const stepIndex = STATUS_STEPS.indexOf(status as (typeof STATUS_STEPS)[number]);
-    const totalSteps = STATUS_STEPS.length;
-    // Bắt đầu từ giữa mốc đầu (stepIndex + 0.5) / totalSteps
-    return Math.round(((stepIndex + 0.5) / totalSteps) * 100);
+    const stepIndex = getStepIndex(status as StatusStep);
+    const maxStep = STATUS_STEPS.length - 1;
+    return Math.round((stepIndex / maxStep) * 100);
 };
 
-const renderStatusBadge = (status: OrderStatus) => {
-    if (status === OrderStatus.COMPLETED) {
-        return <Badge className="bg-emerald-100 text-emerald-700">{STATUS_LABEL[status]}</Badge>;
-    }
+const getStepLeftPercent = (stepStatus: StatusStep) => {
+    const stepIndex = getStepIndex(stepStatus);
+    return TRACK_LEFT_PERCENT + (stepIndex / (STATUS_STEPS.length - 1)) * TRACK_WIDTH_PERCENT;
+};
 
-    if (status === OrderStatus.CANCELLED) {
+const isStepDone = (currentStepIndex: number, stepStatus: StatusStep) =>
+    getStepIndex(stepStatus) <= currentStepIndex;
+
+const renderStatusBadge = (status: OrderStatus) => {
+    if (status === OrderStatus.COMPLETED)
+        return <Badge className="bg-emerald-100 text-emerald-700">{STATUS_LABEL[status]}</Badge>;
+
+    if (status === OrderStatus.CANCELLED)
         return <Badge className="bg-rose-100 text-rose-700">{STATUS_LABEL[status]}</Badge>;
-    }
 
     return <Badge className="bg-yellow-100 text-yellow-700">{STATUS_LABEL[status]}</Badge>;
 };
@@ -192,13 +194,14 @@ const OrderPage = () => {
                     <div className="space-y-4">
                         {activeOrders.map((order) => {
                             const progress = getProgressPercent(order.status);
+                            const currentStepIndex = getStepIndex(order.status as StatusStep);
 
                             return (
                                 <article
                                     key={order.id}
                                     className="rounded-2xl border border-yellow-100 bg-linear-to-r from-yellow-50 to-white p-4"
                                 >
-                                    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                                    <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                                         <div>
                                             <p className="text-sm text-slate-500">Mã đơn</p>
                                             <p className="text-base font-semibold text-slate-800">{order.id}</p>
@@ -211,59 +214,71 @@ const OrderPage = () => {
                                         </div>
                                     </div>
 
-                                    <div className="mb-5">
+                                    <div className="mb-4">
                                         <div className="space-y-3">
                                             {/* Progress bar */}
-                                            <div className="relative">
-                                                <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
+                                            <div className="relative flex justify-center">
+                                                <div className="h-2 w-[75%] overflow-hidden rounded-full bg-slate-200">
                                                     <div
                                                         className="h-full rounded-full bg-yellow-500 transition-all duration-300"
                                                         style={{ width: `${progress}%` }}
                                                     />
                                                 </div>
+
+                                                {/* Icons overlay on progress bar */}
+                                                <div className="absolute inset-x-0 top-1/2 -translate-y-1/2">
+                                                    {STATUS_STEPS.map((stepStatus) => {
+                                                        const isDone = isStepDone(currentStepIndex, stepStatus);
+                                                        const colors = STATUS_COLOR_MAP[stepStatus];
+                                                        const leftPercent = getStepLeftPercent(stepStatus);
+
+                                                        return (
+                                                            <div
+                                                                key={stepStatus}
+                                                                className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2"
+                                                                style={{ left: `${leftPercent}%` }}
+                                                            >
+                                                                <div
+                                                                    className="flex items-center justify-center rounded-full p-1 transition-all duration-300"
+                                                                    style={{
+                                                                        backgroundColor: isDone
+                                                                            ? colors.light
+                                                                            : "rgb(226 232 240)",
+                                                                    }}
+                                                                >
+                                                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                                    <img
+                                                                        src={STATUS_ICON_MAP[stepStatus]}
+                                                                        alt={STATUS_LABEL[stepStatus]}
+                                                                        width={28}
+                                                                        height={28}
+                                                                        style={{
+                                                                            filter: isDone
+                                                                                ? "none"
+                                                                                : "grayscale(1) opacity(0.5)",
+                                                                            transition: "filter 0.3s ease",
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
                                             </div>
 
-                                            {/* Icons and labels grid */}
+                                            {/* Labels */}
                                             <div className="grid grid-cols-4 gap-2">
                                                 {STATUS_STEPS.map((stepStatus) => {
-                                                    const currentIdx = STATUS_STEPS.indexOf(
-                                                        order.status as (typeof STATUS_STEPS)[number]
-                                                    );
-                                                    const stepIdx = STATUS_STEPS.indexOf(stepStatus);
-                                                    const isDone = stepIdx <= currentIdx;
-                                                    const colors = STATUS_COLOR_MAP[stepStatus];
+                                                    const isDone = isStepDone(currentStepIndex, stepStatus);
 
                                                     return (
-                                                        <div
+                                                        <span
                                                             key={stepStatus}
-                                                            className="flex flex-col items-center gap-2"
+                                                            className={`text-center text-xs py-2 ${isDone ? "font-semibold text-slate-700" : "text-slate-400"
+                                                                }`}
                                                         >
-                                                            <div
-                                                                className="flex items-center justify-center rounded-full p-1 transition-all duration-300"
-                                                                style={{
-                                                                    backgroundColor: isDone ? colors.light : "rgb(226 232 240)",
-                                                                }}
-                                                            >
-                                                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                                <img
-                                                                    src={STATUS_ICON_MAP[stepStatus]}
-                                                                    alt={STATUS_LABEL[stepStatus]}
-                                                                    width={28}
-                                                                    height={28}
-                                                                    style={{
-                                                                        filter: isDone ? "none" : "grayscale(1) opacity(0.5)",
-                                                                        transition: "filter 0.3s ease",
-                                                                    }}
-                                                                />
-                                                            </div>
-                                                            {/* Label */}
-                                                            <span
-                                                                className={`text-center text-xs ${isDone ? "font-semibold text-slate-800" : "text-slate-400"
-                                                                    }`}
-                                                            >
-                                                                {STATUS_LABEL[stepStatus]}
-                                                            </span>
-                                                        </div>
+                                                            {STATUS_LABEL[stepStatus]}
+                                                        </span>
                                                     );
                                                 })}
                                             </div>
