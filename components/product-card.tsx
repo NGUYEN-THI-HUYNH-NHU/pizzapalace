@@ -4,8 +4,6 @@ import { useState } from "react";
 import { Product } from "@/type";
 import { PlusCircle } from "lucide-react";
 import Tag from "./ui/tag";
-import { useCart } from "@/contexts/cart-context";
-import toast from "react-hot-toast";
 import ProductModal from "./product-modal";
 
 type ProductCardProps = {
@@ -25,13 +23,12 @@ const formatPrice = (price: number) =>
     }).format(price);
 
 export default function ProductCard({ product }: ProductCardProps) {
-    const { addToCart } = useCart();
     const [open, setOpen] = useState(false);
 
-   const handleAddToCart = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation();
-    setOpen(true); 
-};
+    const handleOpenModal = (e: React.MouseEvent<HTMLButtonElement>) => {
+        e.stopPropagation();
+        setOpen(true);
+    };
 
     return (
         <>
@@ -77,9 +74,9 @@ export default function ProductCard({ product }: ProductCardProps) {
                                 <button
                                     type="button"
                                     className="hover:scale-110 transition-transform"
-                                    onClick={handleAddToCart}
+                                    onClick={handleOpenModal}
                                 >
-                                   <PlusCircle
+                                    <PlusCircle
                                         className="w-14 h-14 fill-yellow-500 text-white pointer-events-none"
                                         strokeWidth={1.0}
                                     />
