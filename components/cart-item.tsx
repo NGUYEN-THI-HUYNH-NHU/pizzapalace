@@ -25,7 +25,7 @@ export function CartItemComponent({ item, product }: CartItemProps) {
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                     ) : (
-                        <div className="w-full h-full flex items-center justify-center text-3xl">🍕</div>
+                        <div className="w-full h-full flex items-center justify-center text-3xl">Pizza image unavailable</div>
                     )}
                 </div>
 
@@ -35,8 +35,8 @@ export function CartItemComponent({ item, product }: CartItemProps) {
                     {item.size && (
                         <p className="text-sm text-gray-500">Cỡ: {item.size}</p>
                     )}
-                    {item.crust && (
-                        <p className="text-sm text-gray-500">Đế: {item.crust}</p>
+                    {(item.crustName || item.crust) && (
+                        <p className="text-sm text-gray-500">Đế: {item.crustName || item.crust}</p>
                     )}
                     {product && (
                         <button

@@ -11,6 +11,7 @@ export interface CartItem {
   description?: string;
   size?: string;
   crust?: string;
+  crustName?: string;
 }
 
 interface CartContextType {
@@ -32,17 +33,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const savedCart = localStorage.getItem('pizzapalace-cart');
     if (savedCart) {
-        try {
-            const parsed = JSON.parse(savedCart);
-            if (Array.isArray(parsed)) {
-                setCartItems(parsed);
-            }
-        } catch (error) {
-            console.error('Failed to load cart from localStorage', error);
+      try {
+        const parsed = JSON.parse(savedCart);
+        if (Array.isArray(parsed)) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect
+          setCartItems(parsed);
         }
+      } catch (error) {
+        console.error('Failed to load cart from localStorage', error);
+      }
     }
     setIsLoaded(true);
-}, []);
+  }, []);
 
   // Save cart 
   useEffect(() => {

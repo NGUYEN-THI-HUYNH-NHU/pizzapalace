@@ -1,12 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { PizzaCrust, Product, PizzaVariant } from "@/type";
+import { useEffect, useMemo, useState } from "react";
+import { Product, PizzaVariant } from "@/type";
 import { X } from "lucide-react";
 import { useCart } from "@/contexts/cart-context";
 import toast from "react-hot-toast";
-import getCrusts from "@/actions/get-crusts";
 import Tag from "./ui/tag";
+import { currencyFormatter } from "@/lib/utils";
 
 type ProductModalProps = {
   product: Product | null;
@@ -15,100 +15,78 @@ type ProductModalProps = {
   editItem?: { size?: string; crust?: string; quantity: number };
 };
 
-const formatPrice = (price: number) =>
-  new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: "VND",
-    maximumFractionDigits: 0,
-  }).format(price);
-
-const normalizeCrustKey = (value?: string) => (value || "").trim().toLowerCase();
-
 export default function ProductModal({ product, open, onClose, editItem }: ProductModalProps) {
   const { addToCart, removeFromCart } = useCart();
 
   const sizes = product?.pizzaDetails?.sizes || [];
-  const crusts = product?.pizzaDetails?.crusts || [];
-  const [crustOptions, setCrustOptions] = useState<PizzaCrust[]>([]);
+  const variants = useMemo(() => product?.pizzaDetails?.variants || [], [product]);
 
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedCrust, setSelectedCrust] = useState("");
   const [quantity, setQuantity] = useState(1);
 
-  const crustNameMap = useMemo(() => {
-    return new Map(crustOptions.map((crust) => [normalizeCrustKey(crust.code), crust.name]));
-  }, [crustOptions]);
+  const crustOptions = useMemo(() => {
+    const map = new Map<string, { code: string; name: string; price: number; isAvailable: boolean }>();
 
-  const crustCodeMap = useMemo(() => {
-    const map = new Map<string, string>();
+    variants
+      .filter((variant) => variant.size === selectedSize)
+      .forEach((variant) => {
+        map.set(variant.crust, {
+          code: variant.crust,
+          name: variant.crustName || variant.crust,
+          price: variant.price,
+          isAvailable: variant.isAvailable,
+        });
+      });
 
-    crustOptions.forEach((crust) => {
-      map.set(normalizeCrustKey(crust.code), crust.code);
-      map.set(normalizeCrustKey(crust.name), crust.code);
-    });
-
-    return map;
-  }, [crustOptions]);
-
-  const resolveCrustCode = useCallback((value?: string) => {
-    if (!value) return "";
-    return crustCodeMap.get(normalizeCrustKey(value)) || value;
-  }, [crustCodeMap]);
+    return Array.from(map.values());
+  }, [variants, selectedSize]);
 
   useEffect(() => {
-    let isMounted = true;
-
-    const loadCrusts = async () => {
-      try {
-        const data = await getCrusts();
-        if (isMounted) {
-          setCrustOptions(data);
-        }
-      } catch {
-        if (isMounted) {
-          setCrustOptions([]);
-        }
-      }
-    };
-
-    if (open) {
-      void loadCrusts();
+    if (!product) {
+      return;
     }
 
-    return () => {
-      isMounted = false;
-    };
-  }, [open]);
+    const defaultSize = editItem?.size || product.pizzaDetails?.sizes?.[0] || variants[0]?.size || "";
+    const defaultCrust = editItem?.crust
+      || variants.find((variant) => variant.size === defaultSize && variant.isAvailable)?.crust
+      || variants.find((variant) => variant.size === defaultSize)?.crust
+      || "";
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSelectedSize(defaultSize);
+    setSelectedCrust(defaultCrust);
+    setQuantity(editItem?.quantity || 1);
+  }, [product, editItem, variants]);
 
   useEffect(() => {
-    if (product) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSelectedSize(editItem?.size || product.pizzaDetails?.sizes?.[0] || "");
-      setSelectedCrust(resolveCrustCode(editItem?.crust || product.pizzaDetails?.crusts?.[0] || ""));
-      setQuantity(editItem?.quantity || 1);
+    if (crustOptions.length === 0) {
+      return;
     }
-  }, [product, editItem, resolveCrustCode]);
+
+    const stillValid = crustOptions.some((option) => option.code === selectedCrust);
+    if (stillValid) {
+      return;
+    }
+
+    const fallbackCrust = crustOptions.find((option) => option.isAvailable)?.code || crustOptions[0]?.code || "";
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSelectedCrust(fallbackCrust);
+  }, [crustOptions, selectedCrust]);
 
   const selectedVariant: PizzaVariant | undefined = useMemo(() => {
-    if (!product?.pizzaDetails?.variants) return undefined;
+    if (!variants.length) return undefined;
 
-    const selectedCrustCode = resolveCrustCode(selectedCrust);
-
-    return product.pizzaDetails.variants.find(
+    return variants.find(
       (v) =>
         v.size === selectedSize &&
-        normalizeCrustKey(v.crust) === normalizeCrustKey(selectedCrustCode) &&
+        v.crust === selectedCrust &&
         v.isAvailable
     );
-  }, [product, selectedSize, selectedCrust, resolveCrustCode]);
+  }, [variants, selectedSize, selectedCrust]);
 
   const finalPrice = selectedVariant?.price || product?.price || 0;
   const totalPrice = finalPrice * quantity;
-
-  const getCrustLabel = (crustCode: string) => {
-    const resolvedCode = resolveCrustCode(crustCode);
-    return crustNameMap.get(normalizeCrustKey(resolvedCode)) || crustCode;
-  };
 
   if (!open || !product) return null;
 
@@ -123,20 +101,21 @@ export default function ProductModal({ product, open, onClose, editItem }: Produ
         id: product!.id,
         name: product!.name,
         price: finalPrice,
-        image: product!.img || "🍕",
+        image: product!.img,
         description: product!.desc,
         size: selectedSize || undefined,
         crust: selectedCrust || undefined,
+        crustName: selectedVariant?.crustName || selectedCrust || undefined,
       });
     }
 
-    toast.success(`${product!.name} đã được cập nhật!`);
+    toast.success(`${product!.name} đã được thêm vào giỏ hàng!`);
     onClose();
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="relative h-[85vh] w-[80vw] max-w-5xl overflow-hidden rounded-2xl bg-white shadow-xl">
+      <div className="relative h-[80vh] w-[70vw] max-w-5xl overflow-hidden rounded-2xl bg-white shadow-xl">
         <button
           type="button"
           onClick={onClose}
@@ -145,122 +124,106 @@ export default function ProductModal({ product, open, onClose, editItem }: Produ
           <X className="h-4 w-4" />
         </button>
 
-        <div className="grid h-full grid-cols-1 md:grid-cols-2">
+        <div className="flex h-full flex-col md:flex-row">
           {/* IMAGE */}
-          <div className="bg-white order-1 h-72 overflow-hidden md:order-1 md:h-full">
+          <div className="order-1 h-72 overflow-hidden bg-white md:h-full md:basis-[38%] md:shrink-0">
             {product.img ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={product.img}
                 alt={product.name}
-                className="h-full w-full max-w-none object-contain"
+                className="h-full w-[220%] max-w-none -translate-x-1/2 object-cover object-right"
               />
             ) : (
-              <div className="flex h-full items-center justify-center text-5xl">🍕</div>
+              <div className="flex h-full items-center justify-center text-5xl">Image unavailable</div>
             )}
           </div>
 
           {/* CONTENT */}
-          <div className="order-2 flex h-full flex-col overflow-y-auto p-5 md:order-2 md:p-8">
-            <h2 className="text-2xl font-bold text-gray-800 md:text-3xl">{product.name}</h2>
-            <p className="mt-2 text-sm text-gray-600">{product.desc}</p>
+          <div className="order-2 flex h-full min-h-0 flex-1 flex-col">
+            <div className="flex-1 overflow-y-auto p-5 md:p-8">
+              <h2 className="text-2xl font-bold text-gray-800 md:text-3xl">{product.name}</h2>
+              <p className="mt-2 text-sm text-gray-600">{product.desc}</p>
 
-            {product.tags.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {product.tags.map((tag) => (
-                  <Tag key={tag.code} name={tag.name} color={tag.color} />
-                ))}
-              </div>
-            )}
-
-            {/* SIZE */}
-            {sizes.length > 0 && (
-              <div className="mt-6">
-                <h3 className="mb-2 text-base font-semibold text-gray-700">Kích thước</h3>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {sizes.map((size) => (
-                    <button
-                      key={size}
-                      onClick={() => setSelectedSize(size)}
-                      className={`rounded-lg border px-3 py-2 text-sm ${selectedSize === size
-                        ? "bg-yellow-600 text-white"
-                        : "border-gray-300"
-                        }`}
-                    >
-                      {size}
-                    </button>
+              {product.tags.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {product.tags.map((tag) => (
+                    <Tag key={tag.code} name={tag.name} color={tag.color} />
                   ))}
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* CRUST */}
-            {crusts.length > 0 && (
-              <div className="mt-6">
-                <h3 className="mb-2 text-base font-semibold text-gray-700">Đế bánh</h3>
-                <div className="space-y-2">
-                  {crusts.map((crust) => {
-                    const crustCode = resolveCrustCode(crust);
-                    const variantAvailable = product.pizzaDetails?.variants?.some(
-                      (v) =>
-                        v.size === selectedSize &&
-                        normalizeCrustKey(v.crust) === normalizeCrustKey(crustCode) &&
-                        v.isAvailable
-                    );
-
-                    const variantPrice =
-                      product.pizzaDetails?.variants?.find(
-                        (v) =>
-                          v.size === selectedSize &&
-                          normalizeCrustKey(v.crust) === normalizeCrustKey(crustCode) &&
-                          v.isAvailable
-                      )?.price || product.price;
-
-                    return (
+              {/* SIZE */}
+              {sizes.length > 0 && (
+                <div className="mt-6">
+                  <h3 className="mb-2 text-base font-semibold text-gray-700">Kích thước</h3>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {sizes.map((size) => (
                       <button
-                        key={crust}
-                        onClick={() => setSelectedCrust(crustCode)}
-                        disabled={!variantAvailable}
-                        className={`flex w-full justify-between rounded-lg border px-3 py-2 text-sm ${normalizeCrustKey(selectedCrust) === normalizeCrustKey(crustCode) ? "border-yellow-500 bg-yellow-50" : ""
-                          } ${!variantAvailable ? "opacity-50" : ""}`}
+                        key={size}
+                        onClick={() => setSelectedSize(size)}
+                        className={`rounded-lg border px-3 py-2 text-sm ${selectedSize === size
+                          ? "bg-yellow-500 text-white"
+                          : "border-gray-300"
+                          }`}
                       >
-                        <span>{getCrustLabel(crustCode)}</span>
-                        <span>{variantAvailable ? formatPrice(variantPrice) : "Hết"}</span>
+                        {size}
                       </button>
-                    );
-                  })}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* QUANTITY */}
-            <div className="mt-6 flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                className="h-10 w-10 rounded-lg border border-gray-300 text-lg font-semibold"
-              >
-                -
-              </button>
-              <span className="w-8 text-center text-base font-medium">{quantity}</span>
-              <button
-                type="button"
-                onClick={() => setQuantity(quantity + 1)}
-                className="h-10 w-10 rounded-lg border border-gray-300 text-lg font-semibold"
-              >
-                +
-              </button>
+              {/* CRUST */}
+              {crustOptions.length > 0 && (
+                <div className="mt-6">
+                  <h3 className="mb-2 text-base font-semibold text-gray-700">Đế bánh</h3>
+                  <div className="space-y-2">
+                    {crustOptions.map((option) => {
+                      return (
+                        <button
+                          key={option.code}
+                          onClick={() => setSelectedCrust(option.code)}
+                          disabled={!option.isAvailable}
+                          className={`flex w-full justify-between rounded-lg border px-3 py-2 text-sm ${selectedCrust === option.code ? "border-yellow-500 bg-yellow-50" : ""
+                            } ${!option.isAvailable ? "opacity-50" : ""}`}
+                        >
+                          <span>{option.name}</span>
+                          <span>{option.isAvailable ? currencyFormatter.format(option.price) : "Hết"}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* BUTTON */}
-            <div className="mt-6 pb-1">
-              <button
-                type="button"
-                onClick={handleAddToCart}
-                className="w-full rounded-lg bg-yellow-500 py-3 text-sm font-semibold text-white"
-              >
-                Thêm vào giỏ hàng - {formatPrice(totalPrice)}
-              </button>
+            <div className="border rounded-2xl mx-2 mb-2 bg-white p-4 md:p-3">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  className="h-11 w-11 rounded-lg border border-gray-300 text-lg font-semibold"
+                >
+                  -
+                </button>
+                <span className="w-8 text-center text-base font-medium">{quantity}</span>
+                <button
+                  type="button"
+                  onClick={() => setQuantity(quantity + 1)}
+                  className="h-11 w-11 rounded-lg border border-gray-300 text-lg font-semibold"
+                >
+                  +
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleAddToCart}
+                  className="ml-auto w-full max-w-md rounded-lg bg-yellow-500 py-3 text-sm font-semibold text-white"
+                >
+                  Thêm vào giỏ hàng - {currencyFormatter.format(totalPrice)}
+                </button>
+              </div>
             </div>
           </div>
 

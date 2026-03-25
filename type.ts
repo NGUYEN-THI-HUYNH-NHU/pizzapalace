@@ -97,6 +97,7 @@ export interface PizzaCrust {
 export interface PizzaVariant {
     size: string;
     crust: string;
+    crustName?: string;
     price: number;
     sku: string;
     isAvailable: boolean;
