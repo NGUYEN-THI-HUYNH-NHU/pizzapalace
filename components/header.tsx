@@ -48,11 +48,13 @@ const Header = () => {
         const display = parsed.address
           ? parsed.address
           : parsed.city
-          ? `${parsed.city.name} - ${parsed.district?.name ?? ""}`
-          : null;
+            ? `${parsed.city.name} - ${parsed.district?.name ?? ""}`
+            : null;
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setAddressText(display);
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const handleAddressChanged = (ev: any) => {
         try {
           const payload =
@@ -62,8 +64,8 @@ const Header = () => {
           const display = payload.address
             ? payload.address
             : payload.city
-            ? `${payload.city.name} - ${payload.district?.name ?? ""}`
-            : null;
+              ? `${payload.city.name} - ${payload.district?.name ?? ""}`
+              : null;
           setAddressText(display);
         } catch (e) {
           // ignore

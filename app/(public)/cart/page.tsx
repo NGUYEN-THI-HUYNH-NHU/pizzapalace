@@ -14,13 +14,13 @@ export default function CartPage() {
 
   useEffect(() => {
     Promise.all([
-        fetch('/api/pizzas').then(r => r.json()).catch(() => []),
-        fetch('/api/beverages').then(r => r.json()).catch(() => []),
-        fetch('/api/combos').then(r => r.json()).catch(() => []),
+      fetch('/api/pizzas').then(r => r.json()).catch(() => []),
+      fetch('/api/beverages').then(r => r.json()).catch(() => []),
+      fetch('/api/combos').then(r => r.json()).catch(() => []),
     ]).then(([pizzas, beverages, combos]) => {
-        setProducts([...pizzas, ...beverages, ...combos]);
+      setProducts([...pizzas, ...beverages, ...combos]);
     });
-}, []);
+  }, []);
 
   return (
     <div className="min-h-screen bg-white">
@@ -38,7 +38,7 @@ export default function CartPage() {
           <div className="text-center py-12">
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">Giỏ hàng trống</h2>
             <p className="text-gray-500 mb-8">Hãy thêm một số sản phẩm vào giỏ hàng của bạn</p>
-            <Link href="/" className="inline-block bg-red-500 text-white px-6 py-3 rounded-lg hover:bg-red-600 transition">
+            <Link href="/" className="inline-block bg-yellow-500 text-white px-6 py-3 rounded-lg hover:bg-yellow-600 transition">
               Tiếp tục mua sắm
             </Link>
           </div>

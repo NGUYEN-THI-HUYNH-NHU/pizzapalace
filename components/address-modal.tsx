@@ -74,6 +74,7 @@ export default function AddressModal({
   useEffect(() => {
     const p = provinces.find((p) => String(p.code) === city);
     if (p && p.districts && p.districts.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDistrict(String(p.districts[0].code));
     }
   }, [city, provinces]);
@@ -82,6 +83,7 @@ export default function AddressModal({
   useEffect(() => {
     const q = address.trim().toLowerCase();
     if (q.length < 2) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSuggestions([]);
       setShowSuggestions(false);
       return;
@@ -359,7 +361,7 @@ const selectStyle: React.CSSProperties = {
 };
 const primaryBtnStyle: React.CSSProperties = {
   flex: 1,
-  background: "#2b6cb0",
+  background: "#f0b100",
   color: "#fff",
   border: "none",
   padding: "10px 14px",
