@@ -6,6 +6,7 @@ type OrderItem = {
   sku: string;
   price: number;
   quantity: number;
+  img: string;
 };
 
 type OrderData = {
@@ -19,7 +20,7 @@ type OrderData = {
   voucherCode?: string;
   subTotal: number;
   shippingFee: number;
-  discount: number;
+  discount?: number;
   totalAmount: number;
 };
 

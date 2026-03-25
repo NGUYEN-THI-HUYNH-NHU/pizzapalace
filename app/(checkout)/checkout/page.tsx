@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import placeOrder from '@/actions/place-order';
+import { useCart } from '@/contexts/cart-context';
 
 type CartItem = {
   id: string;
@@ -10,13 +11,6 @@ type CartItem = {
   price: number;
   quantity: number;
   img: string;
-};
-
-type Voucher = {
-  code: string;
-  label: string;
-  discountType: 'percent' | 'fixed';
-  value: number;
 };
 
 type SessionUser = {
@@ -70,10 +64,10 @@ const normalizeCartItems = (raw: RawCart): CartItem[] => {
 const apiBase = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
 const sessionUrl = '/api/auth/session';
 const cartUrl = apiBase ? (apiBase.endsWith('/api') ? `${apiBase}/cart` : `${apiBase}/api/cart`) : '/api/cart';
-const vouchersUrl = apiBase ? (apiBase.endsWith('/api') ? `${apiBase}/vouchers` : `${apiBase}/api/vouchers`) : '/api/vouchers';
 
 export default function CheckoutPage() {
   const router = useRouter();
+  const { cartItems: contextCartItems } = useCart();
   const [note, setNote] = useState<string>('');
   const [fullName, setFullName] = useState<string>('');
   const [phoneNumber, setPhoneNumber] = useState<string>('');
@@ -82,12 +76,10 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState<string>('cash');
   const [agreedToTerms, setAgreedToTerms] = useState<boolean>(false);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [voucherCode, setVoucherCode] = useState<string>('');
-  const [appliedVoucher, setAppliedVoucher] = useState<Voucher | null>(null);
+  const [appliedVoucher, setAppliedVoucher] = useState<string>('');
   const [voucherMessage, setVoucherMessage] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
-  // const [fetchError, setFetchError] = useState<string>('');
 
   const paymentOptions = [
     { id: 'cash', label: 'Tiền mặt', icon: 'https://cdn.pizzahut.vn/images/Web_V3/Payment/cash.png' },
@@ -97,8 +89,26 @@ export default function CheckoutPage() {
     { id: 'vnpay', label: 'VNPAY', icon: 'https://cdn.pizzahut.vn/images/Web_V3/Payment/vnpay.png' },
   ];
 
+  // Load cart items from context
   useEffect(() => {
-    const loadData = async () => {
+    if (contextCartItems && contextCartItems.length > 0) {
+      const normalizedItems: CartItem[] = contextCartItems.map((item: any) => ({
+        id: String(item.id ?? ''),
+        name: String(item.name ?? 'Sản phẩm'),
+        sku: String(item.size ?? item.crust ?? ''),
+        price: Number(item.price ?? 0),
+        quantity: Number(item.quantity ?? 1),
+        img: String(item.image ?? item.img ?? 'https://via.placeholder.com/64'),
+      }));
+      setCartItems(normalizedItems);
+    } else {
+      setCartItems([]);
+    }
+  }, [contextCartItems]);
+
+  // Load user session
+  useEffect(() => {
+    const loadSession = async () => {
       try {
         const session = await fetch(sessionUrl, { cache: 'no-store' });
         if (session.ok) {
@@ -111,76 +121,50 @@ export default function CheckoutPage() {
       } catch (error) {
         console.warn('Lỗi fetch session:', error);
       }
-
+      
+      // Load address from address modal if available
       try {
-        const cartRes = await fetch(cartUrl, { cache: 'no-store' });
-        if (cartRes.ok) {
-          const cartData = await cartRes.json();
-          const items = normalizeCartItems(cartData);
-          if (items.length > 0) setCartItems(items);
-        }
-      } catch (error) {
-        console.warn('Lỗi fetch cart:', error);
-      }
-
-      try {
-        const voucherRes = await fetch(vouchersUrl, { cache: 'no-store' });
-        if (voucherRes.ok) {
-          const data = await voucherRes.json();
-          if (Array.isArray(data) && data.length) {
-            setVouchers(
-              data.map((item) => ({
-                code: String(item.code ?? item.id ?? '').toUpperCase(),
-                label: String(item.label ?? item.description ?? item.code ?? ''),
-                discountType: item.discountType === 'fixed' ? 'fixed' : 'percent',
-                value: Number(item.value ?? item.discount ?? 0),
-              }))
-            );
+        const savedAddress = localStorage.getItem('pp_address');
+        if (savedAddress) {
+          const addressData = JSON.parse(savedAddress);
+          if (addressData.address && addressData.address.trim()) {
+            const fullAddress = addressData.city?.name && addressData.district?.name 
+              ? `${addressData.address}, ${addressData.district.name}, ${addressData.city.name}`
+              : addressData.address;
+            setAddress(fullAddress);
           }
         }
       } catch (error) {
-        console.warn('Lỗi fetch vouchers:', error);
+        console.warn('Lỗi load address:', error);
       }
-
+      
       setLoading(false);
     };
-
-    loadData();
+    loadSession();
   }, []);
 
-  const availableVouchers = vouchers.length
-    ? vouchers
-    : [
-        { code: 'PIZZALOVE', label: 'Giảm 30% tối đa 50K', discountType: 'percent', value: 30 },
-        { code: 'SHIPFREE', label: 'Miễn phí giao hàng 15K', discountType: 'fixed', value: 15000 },
-      ];
+  // Listen to address changes from address modal
+  useEffect(() => {
+    const handleAddressChange = (event: any) => {
+      const addressData = event.detail;
+      if (addressData.address && addressData.address.trim()) {
+        const fullAddress = addressData.city?.name && addressData.district?.name 
+          ? `${addressData.address}, ${addressData.district.name}, ${addressData.city.name}`
+          : addressData.address;
+        setAddress(fullAddress);
+      }
+    };
+
+    window.addEventListener('pp_address_changed', handleAddressChange);
+    
+    return () => {
+      window.removeEventListener('pp_address_changed', handleAddressChange);
+    };
+  }, []);
 
   const subTotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const shippingFee = subTotal > 0 ? 15000 : 0;
-  const discount = appliedVoucher
-    ? appliedVoucher.discountType === 'percent'
-      ? Math.round((subTotal * appliedVoucher.value) / 100)
-      : appliedVoucher.value
-    : 0;
-  const totalAmount = Math.max(0, subTotal + shippingFee - discount);
-
-  const applyVoucher = () => {
-    const code = voucherCode.trim().toUpperCase();
-    if (!code) {
-      setVoucherMessage('Vui lòng nhập mã voucher.');
-      setAppliedVoucher(null);
-      return;
-    }
-
-    // const voucher = availableVouchers.find((v) => String(v.code).trim().toUpperCase() === code);
-    // if (voucher) {
-    //   setAppliedVoucher(voucher);
-    //   setVoucherMessage(`Áp dụng voucher ${voucher?.code ?? ''}: ${voucher?.label ?? ''}`);
-    // } else {
-    //   setAppliedVoucher(null);
-    //   setVoucherMessage('Voucher không hợp lệ hoặc đã hết hạn.');
-    // }
-  };
+  const totalAmount = Math.max(0, subTotal + shippingFee);
 
   const updateQuantity = (itemId: string, newQuantity: number) => {
     if (newQuantity < 1) return;
@@ -203,18 +187,26 @@ export default function CheckoutPage() {
         note,
         paymentMethod,
         cartItems,
-        voucherCode: appliedVoucher?.code,
         subTotal,
         shippingFee,
-        discount,
         totalAmount,
       };
 
+      console.log('📦 Gửi dữ liệu đặt hàng:', orderData);
       const response = await placeOrder(orderData);
-      router.push(`/order-success/${response.orderId}`);
+      console.log('✅ Phản hồi từ server:', response);
+      
+      if (response?.orderId) {
+        router.push(`/order-success/${response.orderId}`);
+      } else {
+        console.error('❌ Không nhận được orderId từ server');
+        alert('Lỗi: Không nhận được mã đơn hàng từ server.');
+      }
     } catch (error) {
-      console.error('Lỗi đặt hàng:', error);
-      alert('Có lỗi xảy ra khi đặt hàng. Vui lòng thử lại.');
+      console.error('❌ Lỗi đặt hàng:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('📋 Chi tiết lỗi:', errorMessage);
+      alert(`Có lỗi xảy ra khi đặt hàng: ${errorMessage}`);
     }
   };
 
@@ -235,7 +227,7 @@ export default function CheckoutPage() {
           
           {/* 1. Giao Đến */}
           <div className="bg-white border-0 md:border md:border-gray-200 rounded-2xl p-4 md:p-6 shadow-sm md:shadow-none">
-            <div className="flex justify-between items-center mb-4 cursor-pointer">
+            <div className="flex justify-between items-center mb-6 cursor-pointer">
               <div>
                 <h6 className="text-base md:text-xl font-semibold text-black">Giao đến</h6>
               </div>
@@ -243,18 +235,16 @@ export default function CheckoutPage() {
                 <path fill="currentColor" d="M8.822 19.116a.7.7 0 0 1-.45-.169.63.63 0 0 1 0-.9L14.278 12 8.372 5.981a.63.63 0 0 1 0-.9.63.63 0 0 1 .9 0l6.356 6.47a.63.63 0 0 1 0 .9l-6.356 6.468a.66.66 0 0 1-.45.197"></path>
               </svg>
             </div>
-            <div className="flex flex-col gap-4 mt-4">
+
+            <div className="flex flex-col gap-4">
+              {/* Địa chỉ hiển thị */}
               <div>
-                <label className="block text-sm font-medium mb-2 text-black">Địa chỉ giao hàng</label>
-                <input
-                  type="text"
-                  value={address}
-                  readOnly
-                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-1 focus:ring-red-600 focus:border-red-600 outline-none transition-colors bg-gray-50"
-                />
+                <p className="text-sm text-gray-600 mb-2">Địa chỉ giao hàng</p>
+                <p className="text-base font-medium text-black">{address || 'Chưa có địa chỉ'}</p>
               </div>
 
-              <div className="mt-2 md:mt-0">
+              {/* Ghi chú */}
+              <div>
                 <div className="flex justify-between items-center mb-2">
                   <label className="text-sm font-medium text-black">Ghi chú</label>
                   <span className="text-sm text-gray-500 font-medium">{note.length}/200</span>
@@ -269,7 +259,8 @@ export default function CheckoutPage() {
                 />
               </div>
 
-              <div className="hidden md:block mt-2">
+              {/* Thời gian nhận */}
+              <div>
                 <label className="block text-sm font-medium mb-2 text-black">Thời gian nhận</label>
                 <button type="button" className="w-full p-3 border border-gray-300 rounded-md flex justify-between items-center hover:bg-gray-50 transition-colors">
                   <span className="text-base text-black font-normal">Ngay lập tức</span>
@@ -376,17 +367,16 @@ export default function CheckoutPage() {
               />
               <button
                 type="button"
-                onClick={applyVoucher}
                 className="px-4 py-3 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
               >
                 Áp dụng
               </button>
             </div>
             <p className="text-sm text-gray-600 mb-2">
-              {voucherMessage || `Voucher hiện có: ${availableVouchers.map((v) => v.code).join(', ')}`}
+              {voucherMessage || 'Nhập mã voucher để nhận ưu đãi'}
             </p>
             {appliedVoucher && (
-              <p className="text-sm text-green-600">Đang áp dụng: {appliedVoucher.code} - {appliedVoucher.label}</p>
+              <p className="text-sm text-green-600">Đã áp dụng: {appliedVoucher}</p>
             )}
           </div>
 
@@ -426,8 +416,8 @@ export default function CheckoutPage() {
               <p className="text-sm md:text-base font-semibold">{shippingFee.toLocaleString('vi-VN')} ₫</p>
             </div>
             <div className="flex justify-between items-center">
-              <p className="text-sm font-medium">Giảm giá</p>
-              <p className="text-sm md:text-base font-semibold text-green-600">-{discount.toLocaleString('vi-VN')} ₫</p>
+              <p className="text-sm font-medium">Giảm giá thành viên</p>
+              <p className="text-sm md:text-base font-semibold text-green-600">-0 ₫</p>
             </div>
 
             <div className="border-t border-gray-200 pt-4 flex justify-between items-end">
