@@ -18,7 +18,7 @@ type OrderData = {
   voucherCode?: string;
   subTotal: number;
   shippingFee: number;
-  discount: number;
+  discount?: number;
   totalAmount: number;
 };
 
@@ -27,15 +27,9 @@ type OrderResponse = {
   message: string;
 };
 
-const apiBase = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
-const URL = apiBase.endsWith("/api")
-    ? `${apiBase}/orders`
-    : `${apiBase}/api/orders`;
-
 const placeOrder = async (orderData: OrderData): Promise<OrderResponse> => {
-    if (!apiBase) {
-        throw new Error("API base URL not configured");
-    }
+    // Use relative path - browser will automatically use current origin
+    const URL = '/api/orders';
 
     const res = await fetch(URL, {
         method: "POST",
