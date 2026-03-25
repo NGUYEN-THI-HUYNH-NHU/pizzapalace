@@ -10,6 +10,7 @@ type ProductModalProps = {
   product: Product | null;
   open: boolean;
   onClose: () => void;
+  editItem?: { size?: string; crust?: string; quantity: number };
 };
 
 const formatPrice = (price: number) =>
@@ -19,8 +20,8 @@ const formatPrice = (price: number) =>
     maximumFractionDigits: 0,
   }).format(price);
 
-export default function ProductModal({ product, open, onClose }: ProductModalProps) {
-  const { addToCart } = useCart();
+export default function ProductModal({ product, open, onClose, editItem }: ProductModalProps) {
+  const { addToCart, removeFromCart } = useCart();
 
   const sizes = product?.pizzaDetails?.sizes || [];
   const crusts = product?.pizzaDetails?.crusts || [];
@@ -31,11 +32,11 @@ export default function ProductModal({ product, open, onClose }: ProductModalPro
 
   useEffect(() => {
     if (product) {
-      setSelectedSize(product.pizzaDetails?.sizes?.[0] || "");
-      setSelectedCrust(product.pizzaDetails?.crusts?.[0] || "");
-      setQuantity(1);
+      setSelectedSize(editItem?.size || product.pizzaDetails?.sizes?.[0] || "");
+      setSelectedCrust(editItem?.crust || product.pizzaDetails?.crusts?.[0] || "");
+      setQuantity(editItem?.quantity || 1);
     }
-  }, [product]);
+  }, [product, editItem]);
 
   const selectedVariant: PizzaVariant | undefined = useMemo(() => {
     if (!product?.pizzaDetails?.variants) return undefined;
@@ -51,17 +52,24 @@ export default function ProductModal({ product, open, onClose }: ProductModalPro
   if (!open || !product) return null;
 
   const handleAddToCart = () => {
+    // Nếu đang edit thì xóa item cũ trước
+    if (editItem) {
+      removeFromCart(product!.id);
+    }
+
     for (let i = 0; i < quantity; i++) {
       addToCart({
-        id: product.id,
-        name: product.name,
+        id: product!.id,
+        name: product!.name,
         price: finalPrice,
-        image: product.img || "🍕",
-        description: product.desc,
+        image: product!.img || "🍕",
+        description: product!.desc,
+        size: selectedSize || undefined,
+        crust: selectedCrust || undefined,
       });
     }
 
-    toast.success(`${product.name} đã được thêm vào giỏ hàng!`);
+    toast.success(`${product!.name} đã được cập nhật!`);
     onClose();
   };
 
