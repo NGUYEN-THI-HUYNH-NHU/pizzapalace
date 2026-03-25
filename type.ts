@@ -9,10 +9,10 @@ export enum Role {
 
 export enum Category {
     PIZZA = "PIZZA",
-    DRINK = "DRINK",
+    COMBO = "COMBO",
     CHICKEN = "CHICKEN",
     APPETIZER = "APPETIZER",
-    COMBO = "COMBO",
+    DRINK = "DRINK",
 }
 
 export enum OrderStatus {
