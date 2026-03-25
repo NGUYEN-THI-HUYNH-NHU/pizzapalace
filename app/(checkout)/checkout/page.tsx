@@ -1,13 +1,93 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import placeOrder from '@/actions/place-order';
+
+type CartItem = {
+  id: string;
+  name: string;
+  sku: string;
+  price: number;
+  quantity: number;
+  img: string;
+};
+
+type Voucher = {
+  code: string;
+  label: string;
+  discountType: 'percent' | 'fixed';
+  value: number;
+};
+
+type SessionUser = {
+  id: string;
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+};
+
+type RawCartItem = {
+  id?: string | number;
+  productId?: string | number;
+  sku?: string;
+  name?: string;
+  productName?: string;
+  price?: number;
+  amount?: number;
+  quantity?: number;
+  qty?: number;
+  img?: string;
+  image?: string;
+};
+
+type RawCart = RawCartItem[] | { items?: unknown };
+
+const normalizeCartItems = (raw: RawCart): CartItem[] => {
+  if (!raw) {
+    return [];
+  }
+
+  if (Array.isArray(raw)) {
+    return raw.map((item) => ({
+      id: String(item.id ?? item.productId ?? item.sku ?? Math.random()),
+      name: String(item.name ?? item.productName ?? 'Sản phẩm'),
+      sku: String(item.sku ?? ''),
+      price: Number(item.price ?? item.amount ?? 0),
+      quantity: Number(item.quantity ?? item.qty ?? 1),
+      img: String(item.img ?? item.image ?? 'https://via.placeholder.com/64'),
+    }));
+  }
+
+  const rawObj = raw as { items?: unknown };
+  if (Array.isArray(rawObj.items)) {
+    return normalizeCartItems(rawObj.items as RawCart);
+  }
+
+  return [];
+};
+
+const apiBase = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
+const sessionUrl = '/api/auth/session';
+const cartUrl = apiBase ? (apiBase.endsWith('/api') ? `${apiBase}/cart` : `${apiBase}/api/cart`) : '/api/cart';
+const vouchersUrl = apiBase ? (apiBase.endsWith('/api') ? `${apiBase}/vouchers` : `${apiBase}/api/vouchers`) : '/api/vouchers';
 
 export default function CheckoutPage() {
+  const router = useRouter();
   const [note, setNote] = useState<string>('');
   const [fullName, setFullName] = useState<string>('');
   const [phoneNumber, setPhoneNumber] = useState<string>('');
   const [email, setEmail] = useState<string>('');
+  const [address, setAddress] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<string>('cash');
   const [agreedToTerms, setAgreedToTerms] = useState<boolean>(false);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [vouchers, setVouchers] = useState<Voucher[]>([]);
+  const [voucherCode, setVoucherCode] = useState<string>('');
+  const [appliedVoucher, setAppliedVoucher] = useState<Voucher | null>(null);
+  const [voucherMessage, setVoucherMessage] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(true);
+  // const [fetchError, setFetchError] = useState<string>('');
 
   const paymentOptions = [
     { id: 'cash', label: 'Tiền mặt', icon: 'https://cdn.pizzahut.vn/images/Web_V3/Payment/cash.png' },
@@ -16,6 +96,135 @@ export default function CheckoutPage() {
     { id: 'visa', label: 'ATM/VISA', icon: 'https://cdn.pizzahut.vn/images/Web_V3/Payment/visa.png' },
     { id: 'vnpay', label: 'VNPAY', icon: 'https://cdn.pizzahut.vn/images/Web_V3/Payment/vnpay.png' },
   ];
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const session = await fetch(sessionUrl, { cache: 'no-store' });
+        if (session.ok) {
+          const user = (await session.json()) as SessionUser;
+          setFullName(user.name ?? '');
+          setEmail(user.email ?? '');
+          setPhoneNumber(user.phone ?? '');
+          setAddress(user.address ?? '');
+        }
+      } catch (error) {
+        console.warn('Lỗi fetch session:', error);
+      }
+
+      try {
+        const cartRes = await fetch(cartUrl, { cache: 'no-store' });
+        if (cartRes.ok) {
+          const cartData = await cartRes.json();
+          const items = normalizeCartItems(cartData);
+          if (items.length > 0) setCartItems(items);
+        }
+      } catch (error) {
+        console.warn('Lỗi fetch cart:', error);
+      }
+
+      try {
+        const voucherRes = await fetch(vouchersUrl, { cache: 'no-store' });
+        if (voucherRes.ok) {
+          const data = await voucherRes.json();
+          if (Array.isArray(data) && data.length) {
+            setVouchers(
+              data.map((item) => ({
+                code: String(item.code ?? item.id ?? '').toUpperCase(),
+                label: String(item.label ?? item.description ?? item.code ?? ''),
+                discountType: item.discountType === 'fixed' ? 'fixed' : 'percent',
+                value: Number(item.value ?? item.discount ?? 0),
+              }))
+            );
+          }
+        }
+      } catch (error) {
+        console.warn('Lỗi fetch vouchers:', error);
+      }
+
+      setLoading(false);
+    };
+
+    loadData();
+  }, []);
+
+  const availableVouchers = vouchers.length
+    ? vouchers
+    : [
+        { code: 'PIZZALOVE', label: 'Giảm 30% tối đa 50K', discountType: 'percent', value: 30 },
+        { code: 'SHIPFREE', label: 'Miễn phí giao hàng 15K', discountType: 'fixed', value: 15000 },
+      ];
+
+  const subTotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const shippingFee = subTotal > 0 ? 15000 : 0;
+  const discount = appliedVoucher
+    ? appliedVoucher.discountType === 'percent'
+      ? Math.round((subTotal * appliedVoucher.value) / 100)
+      : appliedVoucher.value
+    : 0;
+  const totalAmount = Math.max(0, subTotal + shippingFee - discount);
+
+  const applyVoucher = () => {
+    const code = voucherCode.trim().toUpperCase();
+    if (!code) {
+      setVoucherMessage('Vui lòng nhập mã voucher.');
+      setAppliedVoucher(null);
+      return;
+    }
+
+    // const voucher = availableVouchers.find((v) => String(v.code).trim().toUpperCase() === code);
+    // if (voucher) {
+    //   setAppliedVoucher(voucher);
+    //   setVoucherMessage(`Áp dụng voucher ${voucher?.code ?? ''}: ${voucher?.label ?? ''}`);
+    // } else {
+    //   setAppliedVoucher(null);
+    //   setVoucherMessage('Voucher không hợp lệ hoặc đã hết hạn.');
+    // }
+  };
+
+  const updateQuantity = (itemId: string, newQuantity: number) => {
+    if (newQuantity < 1) return;
+    setCartItems((prev) => prev.map((item) => (item.id === itemId ? { ...item, quantity: newQuantity } : item)));
+  };
+
+  const removeCartItem = (itemId: string) => setCartItems((prev) => prev.filter((item) => item.id !== itemId));
+
+  const canPlaceOrder = Boolean(fullName && phoneNumber && email && address && agreedToTerms && cartItems.length > 0);
+
+  const onPlaceOrder = async () => {
+    if (!canPlaceOrder) return;
+
+    try {
+      const orderData = {
+        fullName,
+        phoneNumber,
+        email,
+        address,
+        note,
+        paymentMethod,
+        cartItems,
+        voucherCode: appliedVoucher?.code,
+        subTotal,
+        shippingFee,
+        discount,
+        totalAmount,
+      };
+
+      const response = await placeOrder(orderData);
+      router.push(`/order-success/${response.orderId}`);
+    } catch (error) {
+      console.error('Lỗi đặt hàng:', error);
+      alert('Có lỗi xảy ra khi đặt hàng. Vui lòng thử lại.');
+    }
+  };
+
+  if (loading) {
+    return (
+      <main className="max-w-[1170px] mx-auto p-4 md:p-6 pt-[88px] md:pt-[110px] min-h-screen font-sans text-gray-800">
+        <p>Đang tải dữ liệu...</p>
+      </main>
+    );
+  }
 
   return (
     <main className="max-w-[1170px] mx-auto p-4 md:p-6 pt-[88px] md:pt-[110px] bg-gray-50 md:bg-white min-h-screen font-sans text-gray-800">
@@ -35,8 +244,16 @@ export default function CheckoutPage() {
               </svg>
             </div>
             <div className="flex flex-col gap-4 mt-4">
-              <p className="md:text-lg font-medium text-black">4/3 Đ. Số 7, Phường 3, Gò Vấp, Hồ Chí Minh, Việt Nam</p>
-              
+              <div>
+                <label className="block text-sm font-medium mb-2 text-black">Địa chỉ giao hàng</label>
+                <input
+                  type="text"
+                  value={address}
+                  readOnly
+                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-1 focus:ring-red-600 focus:border-red-600 outline-none transition-colors bg-gray-50"
+                />
+              </div>
+
               <div className="mt-2 md:mt-0">
                 <div className="flex justify-between items-center mb-2">
                   <label className="text-sm font-medium text-black">Ghi chú</label>
@@ -145,51 +362,82 @@ export default function CheckoutPage() {
         <div className="w-full md:w-1/3 flex flex-col gap-4 md:gap-6">
           
           {/* 4. Voucher */}
-          <div className="bg-white border-0 md:border md:border-gray-200 rounded-2xl p-4 md:p-6 shadow-sm md:shadow-none cursor-pointer">
+          <div className="bg-white border-0 md:border md:border-gray-200 rounded-2xl p-4 md:p-6 shadow-sm md:shadow-none">
             <div className="flex justify-between items-center mb-2">
               <h6 className="text-base md:text-xl font-semibold text-black">Voucher</h6>
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" className="text-gray-400">
-                <path fill="currentColor" d="M8.822 19.116a.7.7 0 0 1-.45-.169.63.63 0 0 1 0-.9L14.278 12 8.372 5.981a.63.63 0 0 1 0-.9.63.63 0 0 1 .9 0l6.356 6.47a.63.63 0 0 1 0 .9l-6.356 6.468a.66.66 0 0 1-.45.197"></path>
-              </svg>
             </div>
-            <p className="text-red-600 text-sm font-medium">Nhập hoặc chọn voucher của bạn</p>
+            <div className="flex gap-2 mb-2">
+              <input
+                type="text"
+                placeholder="Mã voucher"
+                value={voucherCode}
+                onChange={(e) => setVoucherCode(e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-md focus:ring-1 focus:ring-red-600 focus:border-red-600 outline-none transition-colors"
+              />
+              <button
+                type="button"
+                onClick={applyVoucher}
+                className="px-4 py-3 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+              >
+                Áp dụng
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 mb-2">
+              {voucherMessage || `Voucher hiện có: ${availableVouchers.map((v) => v.code).join(', ')}`}
+            </p>
+            {appliedVoucher && (
+              <p className="text-sm text-green-600">Đang áp dụng: {appliedVoucher.code} - {appliedVoucher.label}</p>
+            )}
           </div>
 
           {/* 5. Giỏ hàng & Tạm tính */}
           <div className="bg-white border-0 md:border md:border-gray-200 rounded-2xl p-4 md:p-6 shadow-sm md:shadow-none">
             <div className="flex justify-between items-center cursor-pointer mb-1">
               <h6 className="text-base md:text-xl font-semibold text-black">Giỏ hàng của tôi</h6>
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" className="text-gray-400">
-                <path fill="currentColor" d="M8.822 19.116a.7.7 0 0 1-.45-.169.63.63 0 0 1 0-.9L14.278 12 8.372 5.981a.63.63 0 0 1 0-.9.63.63 0 0 1 .9 0l6.356 6.47a.63.63 0 0 1 0 .9l-6.356 6.468a.66.66 0 0 1-.45.197"></path>
-              </svg>
             </div>
-            <p className="text-sm text-gray-600">Có 3 sản phẩm trong giỏ hàng của bạn</p>
-            
+            <p className="text-sm text-gray-600">Có {cartItems.length} sản phẩm trong giỏ hàng của bạn</p>
             <div className="w-full h-[1px] bg-gray-200 my-4"></div>
-            
+
             <div className="flex flex-col gap-3 pb-4 text-black">
-              <div className="flex justify-between items-center">
-                <p className="text-sm font-medium">Tạm tính</p>
-                <p className="text-sm md:text-base font-semibold">117.000 ₫</p>
-              </div>
-              <div className="flex justify-between items-center">
-                <p className="text-sm font-medium">Giảm giá thành viên</p>
-                <p className="text-sm md:text-base font-semibold text-green-600">0 ₫</p>
-              </div>
-              <div className="flex justify-between items-center">
-                <p className="text-sm font-medium">Phí giao hàng</p>
-                <p className="text-sm md:text-base font-semibold">0 ₫</p>
-              </div>
+              {cartItems.length ? cartItems.map((item) => (
+                <div key={item.id} className="flex items-center gap-3">
+                  <img src={item.img || 'https://via.placeholder.com/64'} alt={item.name} className="w-12 h-12 object-cover rounded" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">{item.name}</p>
+                    <p className="text-xs text-gray-500">{item.sku}</p>
+                    <div className="mt-1 flex items-center gap-2">
+                      <button type="button" className="px-2 py-1 border rounded" onClick={() => updateQuantity(item.id, item.quantity - 1)}>-</button>
+                      <span>{item.quantity}</span>
+                      <button type="button" className="px-2 py-1 border rounded" onClick={() => updateQuantity(item.id, item.quantity + 1)}>+</button>
+                      <button type="button" className="text-xs text-red-500" onClick={() => removeCartItem(item.id)}>Xoá</button>
+                    </div>
+                  </div>
+                  <p className="text-sm font-semibold">{(item.price * item.quantity).toLocaleString('vi-VN')} ₫</p>
+                </div>
+              )) : <p className="text-sm text-gray-500">Giỏ hàng trống.</p>}
+            </div>
+
+            <div className="border-t border-gray-200 pt-4 flex justify-between items-center">
+              <p className="text-sm font-medium">Tạm tính</p>
+              <p className="text-sm md:text-base font-semibold">{subTotal.toLocaleString('vi-VN')} ₫</p>
+            </div>
+            <div className="flex justify-between items-center">
+              <p className="text-sm font-medium">Phí giao hàng</p>
+              <p className="text-sm md:text-base font-semibold">{shippingFee.toLocaleString('vi-VN')} ₫</p>
+            </div>
+            <div className="flex justify-between items-center">
+              <p className="text-sm font-medium">Giảm giá</p>
+              <p className="text-sm md:text-base font-semibold text-green-600">-{discount.toLocaleString('vi-VN')} ₫</p>
             </div>
 
             <div className="border-t border-gray-200 pt-4 flex justify-between items-end">
               <p className="font-medium text-black">Tổng cộng</p>
-              <p className="text-xl md:text-3xl font-bold text-black">117.000 ₫</p>
+              <p className="text-xl md:text-3xl font-bold text-black">{totalAmount.toLocaleString('vi-VN')} ₫</p>
             </div>
 
             <div className="mt-2 text-sm text-gray-500 flex justify-end items-center gap-1">
               <span>Nhận</span>
-              <span className="font-semibold text-black">11 điểm</span>
+              <span className="font-semibold text-black">{Math.max(0, Math.round(totalAmount / 10000))} điểm</span>
               <span>PizzaPalace rewards</span>
             </div>
           </div>
@@ -212,12 +460,14 @@ export default function CheckoutPage() {
           {/* 7. Nút Đặt Hàng */}
           <div className="bg-white md:bg-transparent p-4 md:p-0">
             <button 
+              type="button"
+              onClick={onPlaceOrder}
               className={`w-full py-3 rounded-lg font-medium text-white transition-colors flex items-center justify-center gap-2 ${
-                agreedToTerms 
+                canPlaceOrder 
                 ? 'bg-red-600 hover:bg-red-700' 
                 : 'bg-gray-300 cursor-not-allowed pointer-events-none'
               }`}
-              disabled={!agreedToTerms}
+              disabled={!canPlaceOrder}
             >
               <span className="text-base font-medium">Đặt hàng</span>
             </button>
