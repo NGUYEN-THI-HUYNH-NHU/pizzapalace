@@ -20,8 +20,9 @@ export function CartItemComponent({ item, product }: CartItemProps) {
         <>
             <div className="flex gap-4 pb-4 border-b">
                 {/* Image */}
-                <div className="w-20 h-20 bg-gray-100 rounded flex-shrink-0 overflow-hidden">
+                <div className="w-20 h-20 bg-gray-100 rounded shrink-0 overflow-hidden">
                     {item.image ? (
+                        // eslint-disable-next-line @next/next/no-img-element
                         <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                     ) : (
                         <div className="w-full h-full flex items-center justify-center text-3xl">🍕</div>
@@ -40,7 +41,7 @@ export function CartItemComponent({ item, product }: CartItemProps) {
                     {product && (
                         <button
                             onClick={() => setEditOpen(true)}
-                            className="text-sm text-red-500 font-medium mt-1 hover:underline"
+                            className="text-sm text-yellow-500 font-medium mt-1 hover:underline"
                         >
                             Chỉnh sửa
                         </button>
@@ -64,7 +65,7 @@ export function CartItemComponent({ item, product }: CartItemProps) {
 
                     <button
                         onClick={() => removeFromCart(item.id)}
-                        className="p-2 text-red-500 hover:bg-red-50 rounded"
+                        className="p-2 text-yellow-500 hover:bg-yellow-50 rounded"
                     >
                         <Trash2 size={18} />
                     </button>

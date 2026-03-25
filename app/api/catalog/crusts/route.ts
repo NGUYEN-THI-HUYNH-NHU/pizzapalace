@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
-    const upstreamBaseUrl = process.env.NEXT_PUBLIC_API_URL;
-
     const includeUnavailable =
         request.nextUrl.searchParams.get("includeUnavailable") === "true";
 
-    const upstreamUrl = new URL(`${upstreamBaseUrl}/crusts`);
+    const upstreamUrl = new URL(`${process.env.NEXT_PUBLIC_API_URL}/crusts`);
 
     if (includeUnavailable) {
         upstreamUrl.searchParams.set("includeUnavailable", "true");

@@ -22,10 +22,10 @@ export function OrderSummary({
         <div className="bg-gray-50 rounded-lg p-6 sticky top-4">
             {/* Voucher Section */}
             <div className="mb-6 border-b pb-6">
-                <div className="flex items-center justify-between cursor-pointer hover:text-red-500">
+                <div className="flex items-center justify-between cursor-pointer hover:text-yellow-500">
                     <div>
                         <h3 className="font-semibold text-gray-900">Voucher</h3>
-                        <p className="text-sm text-red-500">Nhập hoặc chọn voucher của bạn</p>
+                        <p className="text-sm text-yellow-500">Nhập hoặc chọn voucher của bạn</p>
                     </div>
                     <ChevronRight size={20} />
                 </div>
@@ -33,7 +33,7 @@ export function OrderSummary({
 
             {/* Promotion Section */}
             <div className="mb-6 border-b pb-6">
-                <div className="flex items-center justify-between cursor-pointer hover:text-red-500">
+                <div className="flex items-center justify-between cursor-pointer hover:text-yellow-500">
                     <div>
                         <h3 className="font-semibold text-gray-900">Muỗng nĩa nhựa</h3>
                         <p className="text-sm text-gray-500">Không</p>
@@ -79,10 +79,10 @@ export function OrderSummary({
                     <div>
                         <h4 className="font-semibold text-gray-900">Tổng cộng</h4>
                         <p className="text-xs text-gray-500">
-                            Nhận {Math.floor(total / 1000)} điểm Hut rewards
+                            Nhận {Math.floor(total / 1000)} điểm
                         </p>
                     </div>
-                    <span className="text-xl font-bold text-red-500">
+                    <span className="text-xl font-bold text-yellow-500">
                         {total.toLocaleString('vi-VN')} đ
                     </span>
                 </div>
@@ -92,8 +92,8 @@ export function OrderSummary({
             <Link
                 href="/checkout"
                 className={`block text-center w-full py-3 rounded-lg font-semibold text-white transition ${cartItems.length === 0
-                        ? 'bg-gray-400 cursor-not-allowed pointer-events-none'
-                        : 'bg-red-500 hover:bg-red-600'
+                    ? 'bg-gray-400 cursor-not-allowed pointer-events-none'
+                    : 'bg-yellow-500 hover:bg-yellow-600'
                     }`}
             >
                 {cartItems.length === 0 ? 'Giỏ hàng trống' : 'Thanh Toán'}
