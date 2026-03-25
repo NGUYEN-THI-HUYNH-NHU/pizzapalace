@@ -7,18 +7,18 @@ import { Category, Product } from "@/type";
 
 const categoryLabelMap: Record<Category, string> = {
     [Category.PIZZA]: "Pizza",
-    [Category.DRINK]: "Nước uống",
+    [Category.COMBO]: "Combo",
     [Category.CHICKEN]: "Gà",
     [Category.APPETIZER]: "Món khai vị",
-    [Category.COMBO]: "Combo",
+    [Category.DRINK]: "Nước uống",
 };
 
 export default async function HomePage() {
-    const [categories, pizzas, beverages, combos] = await Promise.all([
+    const [categories, pizzas, combos, beverages] = await Promise.all([
         getCategories().catch(() => [] as Category[]),
         getPizzas().catch(() => [] as Product[]),
+        getCombos().catch(() => [] as Product[]),
         getBeverages().catch(() => [] as Product[]),
-        getCombos().catch(() => [] as Product[])
     ]);
 
     const productsByCategory: Record<Category, Product[]> = {
