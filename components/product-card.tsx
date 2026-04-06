@@ -5,22 +5,11 @@ import { Product } from "@/type";
 import { PlusCircle } from "lucide-react";
 import Tag from "./ui/tag";
 import ProductModal from "./product-modal";
+import { currencyFormatter } from "@/lib/utils";
 
 type ProductCardProps = {
     product: Product;
 };
-
-const getShortDesc = (desc: string) => {
-    const trimmed = desc.trim();
-    return trimmed.length > 40 ? `${trimmed.slice(0, 40)}...` : trimmed;
-};
-
-const formatPrice = (price: number) =>
-    new Intl.NumberFormat("vi-VN", {
-        style: "currency",
-        currency: "VND",
-        maximumFractionDigits: 0,
-    }).format(price);
 
 export default function ProductCard({ product }: ProductCardProps) {
     const [open, setOpen] = useState(false);
@@ -40,7 +29,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                     <div className="h-48 w-48 shrink overflow-hidden rounded-xl bg-gray-100">
                         {product.img ? (
                             <div
-                                className="h-full w-full bg-cover bg-center"
+                                className="h-full w-full bg-cover bg-center hover:scale-110 transition-transform duration-300"
                                 style={{ backgroundImage: `url(${product.img})` }}
                             />
                         ) : null}
@@ -49,8 +38,8 @@ export default function ProductCard({ product }: ProductCardProps) {
                     <div className="flex flex-1 flex-col justify-between">
                         <div>
                             <h2 className="text-2xl font-semibold text-gray-700">{product.name}</h2>
-                            <p className="line-clamp-2 text-sm text-gray-600 mt-1">
-                                {getShortDesc(product.desc)}
+                            <p className="line-clamp-2 text-sm text-gray-600 mt-1 wrap-break-word">
+                                {product.desc}
                             </p>
 
                             {product.tags.length > 0 && (
@@ -67,7 +56,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                                 <div className="flex flex-col">
                                     <span className="text-xs text-gray-500 font-medium">Chỉ từ</span>
                                     <span className="text-2xl font-bold text-gray-700">
-                                        {formatPrice(product.price)}
+                                        {currencyFormatter.format(product.price)}
                                     </span>
                                 </div>
 

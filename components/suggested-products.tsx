@@ -24,7 +24,7 @@ export function SuggestedProducts({
         {products.map((product) => (
           <div
             key={product.id}
-            className="flex-shrink-0 w-48 border rounded-lg p-4 hover:shadow-md transition"
+            className="shrink-0 w-48 border rounded-lg p-4 hover:shadow-md transition"
           >
             {/* Product Image */}
             <div className="w-full h-32 bg-gray-100 rounded flex items-center justify-center text-4xl mb-3">

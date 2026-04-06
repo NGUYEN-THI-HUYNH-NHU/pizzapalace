@@ -9,10 +9,10 @@ export enum Role {
 
 export enum Category {
     PIZZA = "PIZZA",
-    DRINK = "DRINK",
+    COMBO = "COMBO",
     CHICKEN = "CHICKEN",
     APPETIZER = "APPETIZER",
-    COMBO = "COMBO",
+    DRINK = "DRINK",
 }
 
 export enum OrderStatus {
@@ -97,6 +97,7 @@ export interface PizzaCrust {
 export interface PizzaVariant {
     size: string;
     crust: string;
+    crustName?: string;
     price: number;
     sku: string;
     isAvailable: boolean;

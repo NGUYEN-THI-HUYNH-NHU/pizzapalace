@@ -1,18 +1,19 @@
 interface AddressProps {
-    data?: string | null;
+  data?: string | null;
+  onClick?: () => void;
 }
 
-const Address: React.FC<AddressProps> = ({
-    data
-}) => {
-    return (
-        <div className="flex flex-col items-start">
-            <p className="text-gray-500">
-                Giao hàng tới:
-            </p>
-            <p>{data || "Chưa có địa chỉ"}</p>
-        </div>
-    );
-}
+const Address: React.FC<AddressProps> = ({ data, onClick }) => {
+  return (
+    <button
+      onClick={onClick}
+      aria-haspopup="dialog"
+      className="flex flex-col items-start focus:outline-none"
+    >
+      <p className="text-gray-700 cursor-pointer">Bạn đang ở đâu?</p>
+      <p className={data ? "" : "text-gray-400 cursor-pointer"}>{data || "Chưa có địa chỉ"}</p>
+    </button>
+  );
+};
 
 export default Address;

@@ -1,16 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
-export async function GET(request: NextRequest) {
-    const upstreamBaseUrl = process.env.NEXT_PUBLIC_API_URL;
-
-    const includeUnavailable =
-        request.nextUrl.searchParams.get("includeUnavailable") === "true";
-
-    const upstreamUrl = new URL(`${upstreamBaseUrl}/crusts`);
-
-    if (includeUnavailable) {
-        upstreamUrl.searchParams.set("includeUnavailable", "true");
-    }
+export async function GET() {
+    const upstreamUrl = new URL(`${process.env.NEXT_PUBLIC_API_URL}/crusts`);
 
     try {
         const upstreamResponse = await fetch(upstreamUrl.toString(), {
@@ -30,6 +21,8 @@ export async function GET(request: NextRequest) {
                 { status: upstreamResponse.status }
             );
         }
+
+        console.log(payload);
 
         return NextResponse.json(payload, { status: 200 });
     } catch {
