@@ -17,9 +17,10 @@ type ProductModalProps = {
   open: boolean;
   onClose: () => void;
   editItem?: { size?: string; crust?: string; quantity: number };
+  isEditing: boolean;
 };
 
-export default function ProductModal({ product, open, onClose, editItem }: ProductModalProps) {
+export default function ProductModal({ product, open, onClose, editItem, isEditing }: ProductModalProps) {
   const { addToCart, removeFromCart } = useCart();
 
   const sizes = product?.pizzaDetails?.sizes || [];
@@ -328,7 +329,7 @@ export default function ProductModal({ product, open, onClose, editItem }: Produ
                           className={`flex w-full justify-between rounded-lg border px-3 py-2 text-sm ${selectedCrust === option.code ? "border-yellow-500 bg-yellow-50" : ""
                             } ${!option.isAvailable ? "opacity-50" : ""}`}
                         >
-                          <span>{option.name}</span>
+                          <span>{option.name} ({selectedSize})</span>
                           <span>{option.isAvailable ? currencyFormatter.format(option.price) : "Hết"}</span>
 >>>>>>> 93a5921e025f85ab8c30f1b281851981f4fa88cb
                         </button>
@@ -380,7 +381,7 @@ export default function ProductModal({ product, open, onClose, editItem }: Produ
                 <button
                   type="button"
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="h-11 w-11 rounded-lg border border-gray-300 text-lg font-semibold"
+                  className="h-11 w-11 rounded-lg border border-gray-300 text-lg font-semibold text-yellow-500"
                 >
                   -
                 </button>
@@ -388,7 +389,7 @@ export default function ProductModal({ product, open, onClose, editItem }: Produ
                 <button
                   type="button"
                   onClick={() => setQuantity(quantity + 1)}
-                  className="h-11 w-11 rounded-lg border border-gray-300 text-lg font-semibold"
+                  className="h-11 w-11 rounded-lg border border-gray-300 text-lg font-semibold text-yellow-500"
                 >
                   +
                 </button>
@@ -398,7 +399,7 @@ export default function ProductModal({ product, open, onClose, editItem }: Produ
                   onClick={handleAddToCart}
                   className="ml-auto w-full max-w-md rounded-lg bg-yellow-500 py-3 text-sm font-semibold text-white"
                 >
-                  Thêm vào giỏ hàng - {currencyFormatter.format(totalPrice)}
+                  {isEditing ? `Cập nhật giỏ hàng - ${currencyFormatter.format(totalPrice)}` : `Thêm vào giỏ hàng - ${currencyFormatter.format(totalPrice)}`}
                 </button>
               </div>
             </div>

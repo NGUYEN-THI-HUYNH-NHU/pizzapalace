@@ -181,6 +181,7 @@ export function CartItemComponent({ item, product }: CartItemProps) {
                     open={editOpen}
                     onClose={() => setEditOpen(false)}
                     editItem={{ size: item.size, crust: item.crust, quantity: item.quantity }}
+                    isEditing={true}
                 />
             )}
         </>
