@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { currencyFormatter, formatDateTime } from "@/lib/utils";
 import { Order, OrderStatus, PaymentMethod } from "@/type";
@@ -37,112 +40,9 @@ const STATUS_COLOR_MAP: Record<OrderStatus, { light: string; dark: string }> = {
     [OrderStatus.CANCELLED]: { light: "rgb(254 226 226)", dark: "rgb(127 29 29)" }, // đỏ light/dark
 };
 
-const MOCK_ORDERS: Order[] = [
-    {
-        id: "PP-20260323-0184",
-        customerName: "Nguyen Van A",
-        customerPhone: "0901234567",
-        customerAddress: "12 Nguyen Hue, Quan 1, TP.HCM",
-        userId: "u_1",
-        user: null,
-        totalAmount: 329000,
-        status: OrderStatus.PREPARING,
-        paymentMethod: PaymentMethod.CASH,
-        isPaid: false,
-        createdAt: "2026-03-23T11:20:00.000Z",
-        updatedAt: "2026-03-23T11:28:00.000Z",
-        orderItems: [
-            {
-                productId: "p_1",
-                productName: "Combo Family",
-                sku: "COMBO-FAM-01",
-                price: 259000,
-                quantity: 1,
-                selectedOptions: [],
-            },
-            {
-                productId: "p_2",
-                productName: "Coca Cola",
-                sku: "DRINK-COKE-390",
-                price: 35000,
-                quantity: 2,
-                selectedOptions: [],
-            },
-        ],
-    },
-    {
-        id: "PP-20260323-0181",
-        customerName: "Nguyen Van A",
-        customerPhone: "0901234567",
-        customerAddress: "12 Nguyen Hue, Quan 1, TP.HCM",
-        userId: "u_1",
-        user: null,
-        totalAmount: 245000,
-        status: OrderStatus.DELIVERING,
-        paymentMethod: PaymentMethod.ONLINE,
-        isPaid: true,
-        createdAt: "2026-03-23T10:40:00.000Z",
-        updatedAt: "2026-03-23T11:10:00.000Z",
-        orderItems: [
-            {
-                productId: "p_3",
-                productName: "Pizza Hai San",
-                sku: "PIZZA-HS-L",
-                price: 245000,
-                quantity: 1,
-                selectedOptions: [],
-            },
-        ],
-    },
-    {
-        id: "PP-20260322-0175",
-        customerName: "Nguyen Van A",
-        customerPhone: "0901234567",
-        customerAddress: "12 Nguyen Hue, Quan 1, TP.HCM",
-        userId: "u_1",
-        user: null,
-        totalAmount: 189000,
-        status: OrderStatus.COMPLETED,
-        paymentMethod: PaymentMethod.CASH,
-        isPaid: true,
-        createdAt: "2026-03-22T17:22:00.000Z",
-        updatedAt: "2026-03-22T18:01:00.000Z",
-        orderItems: [
-            {
-                productId: "p_4",
-                productName: "Pizza Pepperoni",
-                sku: "PIZZA-PEP-M",
-                price: 189000,
-                quantity: 1,
-                selectedOptions: [],
-            },
-        ],
-    },
-    {
-        id: "PP-20260321-0169",
-        customerName: "Nguyen Van A",
-        customerPhone: "0901234567",
-        customerAddress: "12 Nguyen Hue, Quan 1, TP.HCM",
-        userId: "u_1",
-        user: null,
-        totalAmount: 119000,
-        status: OrderStatus.CANCELLED,
-        paymentMethod: PaymentMethod.ONLINE,
-        isPaid: false,
-        createdAt: "2026-03-21T19:10:00.000Z",
-        updatedAt: "2026-03-21T19:18:00.000Z",
-        orderItems: [
-            {
-                productId: "p_5",
-                productName: "Mì Ý Bò Bằm",
-                sku: "APP-SPA-BO",
-                price: 119000,
-                quantity: 1,
-                selectedOptions: [],
-            },
-        ],
-    },
-];
+type OrderListResponse = {
+    orders: Order[];
+};
 
 const getStepIndex = (status: StatusStep) => STATUS_STEPS.indexOf(status);
 
@@ -171,12 +71,53 @@ const renderStatusBadge = (status: OrderStatus) => {
 };
 
 const OrderPage = () => {
-    const activeOrders = MOCK_ORDERS.filter(
+    const [orders, setOrders] = useState<Order[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [loadError, setLoadError] = useState("");
+
+    useEffect(() => {
+        const fetchOrders = async () => {
+            try {
+                const res = await fetch("/api/orders", { cache: "no-store" });
+                if (!res.ok) {
+                    throw new Error(`Failed to fetch orders: ${res.status}`);
+                }
+
+                const data = (await res.json()) as OrderListResponse;
+                setOrders(Array.isArray(data.orders) ? data.orders : []);
+            } catch (error) {
+                console.error("Loi fetch orders:", error);
+                setLoadError("Khong the tai danh sach don hang. Vui long thu lai.");
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchOrders();
+    }, []);
+
+    const activeOrders = orders.filter(
         (order) => order.status !== OrderStatus.COMPLETED && order.status !== OrderStatus.CANCELLED
     );
-    const historyOrders = MOCK_ORDERS.filter(
+    const historyOrders = orders.filter(
         (order) => order.status === OrderStatus.COMPLETED || order.status === OrderStatus.CANCELLED
     );
+
+    if (isLoading) {
+        return (
+            <div className="mx-auto w-full max-w-5xl py-6">
+                <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-500">Dang tai don hang...</p>
+            </div>
+        );
+    }
+
+    if (loadError) {
+        return (
+            <div className="mx-auto w-full max-w-5xl py-6">
+                <p className="rounded-xl bg-rose-50 p-4 text-sm text-rose-700">{loadError}</p>
+            </div>
+        );
+    }
 
     return (
         <div className="mx-auto w-full max-w-5xl space-y-8 py-6">

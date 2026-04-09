@@ -67,7 +67,7 @@ const cartUrl = apiBase ? (apiBase.endsWith('/api') ? `${apiBase}/cart` : `${api
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { cartItems: contextCartItems } = useCart();
+  const { cartItems: contextCartItems, clearCart } = useCart();
   const [note, setNote] = useState<string>('');
   const [fullName, setFullName] = useState<string>('');
   const [phoneNumber, setPhoneNumber] = useState<string>('');
@@ -92,6 +92,7 @@ export default function CheckoutPage() {
   // Load cart items from context
   useEffect(() => {
     if (contextCartItems && contextCartItems.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const normalizedItems: CartItem[] = contextCartItems.map((item: any) => ({
         id: String(item.id ?? ''),
         name: String(item.name ?? 'Sản phẩm'),
@@ -100,6 +101,7 @@ export default function CheckoutPage() {
         quantity: Number(item.quantity ?? 1),
         img: String(item.image ?? item.img ?? 'https://via.placeholder.com/64'),
       }));
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCartItems(normalizedItems);
     } else {
       setCartItems([]);
@@ -121,14 +123,14 @@ export default function CheckoutPage() {
       } catch (error) {
         console.warn('Lỗi fetch session:', error);
       }
-      
+
       // Load address from address modal if available
       try {
         const savedAddress = localStorage.getItem('pp_address');
         if (savedAddress) {
           const addressData = JSON.parse(savedAddress);
           if (addressData.address && addressData.address.trim()) {
-            const fullAddress = addressData.city?.name && addressData.district?.name 
+            const fullAddress = addressData.city?.name && addressData.district?.name
               ? `${addressData.address}, ${addressData.district.name}, ${addressData.city.name}`
               : addressData.address;
             setAddress(fullAddress);
@@ -137,7 +139,7 @@ export default function CheckoutPage() {
       } catch (error) {
         console.warn('Lỗi load address:', error);
       }
-      
+
       setLoading(false);
     };
     loadSession();
@@ -145,10 +147,11 @@ export default function CheckoutPage() {
 
   // Listen to address changes from address modal
   useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleAddressChange = (event: any) => {
       const addressData = event.detail;
       if (addressData.address && addressData.address.trim()) {
-        const fullAddress = addressData.city?.name && addressData.district?.name 
+        const fullAddress = addressData.city?.name && addressData.district?.name
           ? `${addressData.address}, ${addressData.district.name}, ${addressData.city.name}`
           : addressData.address;
         setAddress(fullAddress);
@@ -156,7 +159,7 @@ export default function CheckoutPage() {
     };
 
     window.addEventListener('pp_address_changed', handleAddressChange);
-    
+
     return () => {
       window.removeEventListener('pp_address_changed', handleAddressChange);
     };
@@ -195,8 +198,11 @@ export default function CheckoutPage() {
       console.log('📦 Gửi dữ liệu đặt hàng:', orderData);
       const response = await placeOrder(orderData);
       console.log('✅ Phản hồi từ server:', response);
-      
+
       if (response?.orderId) {
+        clearCart();
+        setCartItems([]);
+        localStorage.removeItem('pizzapalace-cart');
         router.push(`/order-success/${response.orderId}`);
       } else {
         console.error('❌ Không nhận được orderId từ server');
@@ -212,19 +218,19 @@ export default function CheckoutPage() {
 
   if (loading) {
     return (
-      <main className="max-w-[1170px] mx-auto p-4 md:p-6 pt-[88px] md:pt-[110px] min-h-screen font-sans text-gray-800">
+      <main className="max-w-[1170px] mx-auto p-4 md:p-6 min-h-screen font-sans text-gray-800">
         <p>Đang tải dữ liệu...</p>
       </main>
     );
   }
 
   return (
-    <main className="max-w-[1170px] mx-auto p-4 md:p-6 pt-[88px] md:pt-[110px] bg-gray-50 md:bg-white min-h-screen font-sans text-gray-800">
+    <main className="max-w-[1170px] mx-auto p-4 md:p-6 bg-gray-50 md:bg-white min-h-screen font-sans text-gray-800">
       <div className="flex flex-col md:flex-row gap-4 md:gap-6">
-        
+
         {/* === CỘT TRÁI: Thông tin giao hàng & Thanh toán === */}
         <div className="w-full md:w-2/3 flex flex-col gap-4 md:gap-6">
-          
+
           {/* 1. Giao Đến */}
           <div className="bg-white border-0 md:border md:border-gray-200 rounded-2xl p-4 md:p-6 shadow-sm md:shadow-none">
             <div className="flex justify-between items-center mb-6 cursor-pointer">
@@ -276,7 +282,7 @@ export default function CheckoutPage() {
               <h6 className="text-base md:text-xl font-semibold text-black">Người đặt hàng</h6>
               <p className="text-sm text-gray-500 mt-1">Thông tin được dùng để tích lũy điểm thành viên</p>
             </div>
-            
+
             <div className="flex flex-col gap-6">
               <div>
                 <label className="block text-sm font-medium mb-2 text-black">Họ và tên</label>
@@ -330,9 +336,9 @@ export default function CheckoutPage() {
               {paymentOptions.map((option) => (
                 <label key={option.id} className="flex items-center gap-3 cursor-pointer select-none">
                   <div className="relative flex items-center justify-center">
-                    <input 
-                      type="radio" 
-                      name="payment" 
+                    <input
+                      type="radio"
+                      name="payment"
                       value={option.id}
                       className="peer appearance-none w-5 h-5 border border-gray-300 rounded-full checked:border-red-600 checked:border-[5px] transition-all cursor-pointer"
                       checked={paymentMethod === option.id}
@@ -351,7 +357,7 @@ export default function CheckoutPage() {
 
         {/* === CỘT PHẢI: Khuyến mãi & Tổng kết === */}
         <div className="w-full md:w-1/3 flex flex-col gap-4 md:gap-6">
-          
+
           {/* 4. Voucher */}
           <div className="bg-white border-0 md:border md:border-gray-200 rounded-2xl p-4 md:p-6 shadow-sm md:shadow-none">
             <div className="flex justify-between items-center mb-2">
@@ -435,8 +441,8 @@ export default function CheckoutPage() {
           {/* 6. Đồng ý điều khoản */}
           <div className="bg-white border-0 md:border md:border-gray-200 rounded-2xl p-4 md:p-6 shadow-sm md:shadow-none">
             <label className="flex items-start gap-3 cursor-pointer select-none">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 className="w-5 h-5 mt-0.5 text-red-600 border-gray-300 rounded focus:ring-red-600"
                 checked={agreedToTerms}
                 onChange={(e) => setAgreedToTerms(e.target.checked)}
@@ -449,14 +455,13 @@ export default function CheckoutPage() {
 
           {/* 7. Nút Đặt Hàng */}
           <div className="bg-white md:bg-transparent p-4 md:p-0">
-            <button 
+            <button
               type="button"
               onClick={onPlaceOrder}
-              className={`w-full py-3 rounded-lg font-medium text-white transition-colors flex items-center justify-center gap-2 ${
-                canPlaceOrder 
-                ? 'bg-red-600 hover:bg-red-700' 
+              className={`w-full py-3 rounded-lg font-medium text-white transition-colors flex items-center justify-center gap-2 ${canPlaceOrder
+                ? 'bg-red-600 hover:bg-red-700'
                 : 'bg-gray-300 cursor-not-allowed pointer-events-none'
-              }`}
+                }`}
               disabled={!canPlaceOrder}
             >
               <span className="text-base font-medium">Đặt hàng</span>
