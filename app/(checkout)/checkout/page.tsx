@@ -11,6 +11,9 @@ type CartItem = {
   price: number;
   quantity: number;
   img: string;
+  size?: string;
+  crust?: string;
+  crustName?: string;
 };
 
 type SessionUser = {
@@ -33,6 +36,9 @@ type RawCartItem = {
   qty?: number;
   img?: string;
   image?: string;
+  size?: string;
+  crust?: string;
+  crustName?: string;
 };
 
 type RawCart = RawCartItem[] | { items?: unknown };
@@ -50,6 +56,9 @@ const normalizeCartItems = (raw: RawCart): CartItem[] => {
       price: Number(item.price ?? item.amount ?? 0),
       quantity: Number(item.quantity ?? item.qty ?? 1),
       img: String(item.img ?? item.image ?? 'https://via.placeholder.com/64'),
+      size: typeof item.size === 'string' ? item.size : undefined,
+      crust: typeof item.crust === 'string' ? item.crust : undefined,
+      crustName: typeof item.crustName === 'string' ? item.crustName : undefined,
     }));
   }
 
@@ -100,6 +109,9 @@ export default function CheckoutPage() {
         price: Number(item.price ?? 0),
         quantity: Number(item.quantity ?? 1),
         img: String(item.image ?? item.img ?? 'https://via.placeholder.com/64'),
+        size: typeof item.size === 'string' ? item.size : undefined,
+        crust: typeof item.crust === 'string' ? item.crust : undefined,
+        crustName: typeof item.crustName === 'string' ? item.crustName : undefined,
       }));
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setCartItems(normalizedItems);
@@ -176,12 +188,35 @@ export default function CheckoutPage() {
 
   const removeCartItem = (itemId: string) => setCartItems((prev) => prev.filter((item) => item.id !== itemId));
 
+  const dedupeCartItems = (items: CartItem[]) => {
+    const merged = new Map<string, CartItem>();
+
+    items.forEach((item) => {
+      const key = [item.id, item.sku, item.size ?? "", item.crust ?? "", item.crustName ?? "", item.price].join("|");
+      const existing = merged.get(key);
+
+      if (existing) {
+        merged.set(key, {
+          ...existing,
+          quantity: existing.quantity + item.quantity,
+        });
+        return;
+      }
+
+      merged.set(key, { ...item });
+    });
+
+    return Array.from(merged.values());
+  };
+
   const canPlaceOrder = Boolean(fullName && phoneNumber && email && address && agreedToTerms && cartItems.length > 0);
 
   const onPlaceOrder = async () => {
     if (!canPlaceOrder) return;
 
     try {
+      const uniqueCartItems = dedupeCartItems(cartItems);
+
       const orderData = {
         fullName,
         phoneNumber,
@@ -189,10 +224,10 @@ export default function CheckoutPage() {
         address,
         note,
         paymentMethod,
-        cartItems,
-        subTotal,
+        cartItems: uniqueCartItems,
+        subTotal: uniqueCartItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
         shippingFee,
-        totalAmount,
+        totalAmount: Math.max(0, uniqueCartItems.reduce((sum, item) => sum + item.price * item.quantity, 0) + shippingFee),
       };
 
       console.log('📦 Gửi dữ liệu đặt hàng:', orderData);

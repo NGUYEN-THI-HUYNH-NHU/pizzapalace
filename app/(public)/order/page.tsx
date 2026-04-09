@@ -277,7 +277,7 @@ const OrderPage = () => {
 
                                 <div className="mt-3 border-t border-dashed border-gray-200 pt-3 text-sm text-slate-600">
                                     {order.orderItems.map((item) => (
-                                        <p key={`${order.id}-${item.sku}`}>
+                                        <p key={`${order.id}-${item.productId}`}>
                                             {item.quantity} x {item.productName}
                                         </p>
                                     ))}
