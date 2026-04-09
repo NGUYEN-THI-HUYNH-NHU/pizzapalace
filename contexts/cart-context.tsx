@@ -1,7 +1,6 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { PizzaDetails } from '@/type';
 
 export interface CartItem {
   id: string;
@@ -14,12 +13,7 @@ export interface CartItem {
   description?: string;
   size?: string;
   crust?: string;
-<<<<<<< HEAD
-  sku?: string;
-  pizzaDetails?: PizzaDetails | null;
-=======
   crustName?: string;
->>>>>>> 93a5921e025f85ab8c30f1b281851981f4fa88cb
 }
 
 interface CartContextType {
