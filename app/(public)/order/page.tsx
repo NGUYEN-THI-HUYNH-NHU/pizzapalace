@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { currencyFormatter, formatDateTime } from "@/lib/utils";
-import { Order, OrderStatus, PaymentMethod } from "@/type";
+import { cn, currencyFormatter, formatDateTime } from "@/lib/utils";
+import { Order, OrderStatus } from "@/type";
+import { io, type Socket } from "socket.io-client";
+import { PAYMENT_LABELS, STATUS_COLOR_MAP, STATUS_LABELS } from "@/lib/order-utils";
 
 const STATUS_STEPS = [
     OrderStatus.PENDING,
@@ -16,14 +18,6 @@ type StatusStep = (typeof STATUS_STEPS)[number];
 const TRACK_LEFT_PERCENT = 12.5;
 const TRACK_WIDTH_PERCENT = 75;
 
-const STATUS_LABEL: Record<OrderStatus, string> = {
-    [OrderStatus.PENDING]: "Đã tiếp nhận",
-    [OrderStatus.PREPARING]: "Đang chuẩn bị",
-    [OrderStatus.DELIVERING]: "Đang giao",
-    [OrderStatus.COMPLETED]: "Hoàn tất",
-    [OrderStatus.CANCELLED]: "Đã hủy",
-};
-
 const STATUS_ICON_MAP: Record<OrderStatus, string> = {
     [OrderStatus.PENDING]: "/pending.svg",
     [OrderStatus.PREPARING]: "/preparing.svg",
@@ -32,16 +26,27 @@ const STATUS_ICON_MAP: Record<OrderStatus, string> = {
     [OrderStatus.CANCELLED]: "/canceled.svg",
 };
 
-const STATUS_COLOR_MAP: Record<OrderStatus, { light: string; dark: string }> = {
-    [OrderStatus.PENDING]: { light: "rgb(219 234 254)", dark: "rgb(30 58 138)" }, // xanh dương light/dark
-    [OrderStatus.PREPARING]: { light: "rgb(254 243 199)", dark: "rgb(161 98 7)" }, // vàng light/dark
-    [OrderStatus.DELIVERING]: { light: "rgb(254 237 215)", dark: "rgb(154 52 18)" }, // cam light/dark
-    [OrderStatus.COMPLETED]: { light: "rgb(220 252 231)", dark: "rgb(22 101 52)" }, // xanh lá light/dark
-    [OrderStatus.CANCELLED]: { light: "rgb(254 226 226)", dark: "rgb(127 29 29)" }, // đỏ light/dark
-};
-
 type OrderListResponse = {
     orders: Order[];
+};
+
+type SessionResponse = {
+    id?: string;
+};
+
+type RealtimeOrderPayload = {
+    order?: Order;
+};
+
+const upsertOrder = (current: Order[], incomingOrder: Order) => {
+    const existingIndex = current.findIndex((order) => order.id === incomingOrder.id);
+    if (existingIndex === -1) {
+        return [incomingOrder, ...current];
+    }
+
+    const next = [...current];
+    next[existingIndex] = incomingOrder;
+    return next;
 };
 
 const getStepIndex = (status: StatusStep) => STATUS_STEPS.indexOf(status);
@@ -61,13 +66,8 @@ const isStepDone = (currentStepIndex: number, stepStatus: StatusStep) =>
     getStepIndex(stepStatus) <= currentStepIndex;
 
 const renderStatusBadge = (status: OrderStatus) => {
-    if (status === OrderStatus.COMPLETED)
-        return <Badge className="bg-emerald-100 text-emerald-700">{STATUS_LABEL[status]}</Badge>;
-
-    if (status === OrderStatus.CANCELLED)
-        return <Badge className="bg-rose-100 text-rose-700">{STATUS_LABEL[status]}</Badge>;
-
-    return <Badge className="bg-yellow-100 text-yellow-700">{STATUS_LABEL[status]}</Badge>;
+    const colorMap = STATUS_COLOR_MAP[status];
+    return <Badge variant="outline" className={cn(colorMap.className)}>{colorMap.label}</Badge>;
 };
 
 const OrderPage = () => {
@@ -94,6 +94,49 @@ const OrderPage = () => {
         };
 
         fetchOrders();
+    }, []);
+
+    useEffect(() => {
+        const realtimeUrl = process.env.NEXT_PUBLIC_REALTIME_URL;
+
+        let socket: Socket | null = null;
+
+        const initRealtime = async () => {
+            const sessionResponse = await fetch("/api/auth/session", { cache: "no-store" });
+            if (!sessionResponse.ok) {
+                return;
+            }
+
+            const sessionPayload = (await sessionResponse.json()) as SessionResponse;
+            if (!sessionPayload?.id) {
+                return;
+            }
+
+            socket = io(realtimeUrl, {
+                transports: ["websocket"],
+            });
+
+            socket.on("connect", () => {
+                socket?.emit("join:user", { userId: sessionPayload.id });
+            });
+
+            socket.on("order:updated", (payload: RealtimeOrderPayload) => {
+                const incomingOrder = payload?.order;
+                if (!incomingOrder) {
+                    return;
+                }
+
+                setOrders((current) => upsertOrder(current, incomingOrder));
+            });
+        };
+
+        initRealtime().catch((error) => {
+            console.error("Loi khoi tao realtime order:", error);
+        });
+
+        return () => {
+            socket?.disconnect();
+        };
     }, []);
 
     const activeOrders = orders.filter(
@@ -170,7 +213,6 @@ const OrderPage = () => {
                                                 <div className="absolute inset-x-0 top-1/2 -translate-y-1/2">
                                                     {STATUS_STEPS.map((stepStatus) => {
                                                         const isDone = isStepDone(currentStepIndex, stepStatus);
-                                                        const colors = STATUS_COLOR_MAP[stepStatus];
                                                         const leftPercent = getStepLeftPercent(stepStatus);
 
                                                         return (
@@ -183,14 +225,14 @@ const OrderPage = () => {
                                                                     className="flex items-center justify-center rounded-full p-1 transition-all duration-300"
                                                                     style={{
                                                                         backgroundColor: isDone
-                                                                            ? colors.light
+                                                                            ? "rgb(245 245 245)"
                                                                             : "rgb(226 232 240)",
                                                                     }}
                                                                 >
                                                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                                                     <img
                                                                         src={STATUS_ICON_MAP[stepStatus]}
-                                                                        alt={STATUS_LABEL[stepStatus]}
+                                                                        alt={STATUS_LABELS[stepStatus]}
                                                                         width={28}
                                                                         height={28}
                                                                         style={{
@@ -218,7 +260,7 @@ const OrderPage = () => {
                                                             className={`text-center text-xs py-2 ${isDone ? "font-semibold text-slate-700" : "text-slate-400"
                                                                 }`}
                                                         >
-                                                            {STATUS_LABEL[stepStatus]}
+                                                            {STATUS_LABELS[stepStatus]}
                                                         </span>
                                                     );
                                                 })}
@@ -233,7 +275,7 @@ const OrderPage = () => {
                                         </p>
                                         <p>
                                             <span className="font-medium text-slate-700">Thanh toán:</span>{" "}
-                                            {order.paymentMethod === PaymentMethod.CASH ? "Tiền mặt" : "Trực tuyến"}
+                                            {PAYMENT_LABELS[order.paymentMethod]}
                                             {order.isPaid ? " (đã thanh toán)" : " (chưa thanh toán)"}
                                         </p>
                                     </div>
