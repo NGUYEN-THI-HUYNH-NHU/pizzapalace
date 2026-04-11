@@ -7,16 +7,21 @@ import Link from 'next/link';
 interface OrderSummaryProps {
     discountPercentage?: number;
     shippingFee?: number;
+    subtotal?: number;
+    itemCount?: number;
 }
 
 export function OrderSummary({
     discountPercentage = 0,
     shippingFee = 0,
+    subtotal: subtotalOverride,
+    itemCount,
 }: OrderSummaryProps) {
     const { getTotalPrice, cartItems } = useCart();
-    const subtotal = getTotalPrice();
+    const subtotal = subtotalOverride ?? getTotalPrice();
     const discount = Math.round((subtotal * discountPercentage) / 100);
     const total = subtotal - discount + shippingFee;
+    const checkoutItemCount = itemCount ?? cartItems.length;
 
     return (
         <div className="bg-gray-50 rounded-lg p-6 sticky top-4">
@@ -91,12 +96,12 @@ export function OrderSummary({
             {/* Checkout Button */}
             <Link
                 href="/checkout"
-                className={`block text-center w-full py-3 rounded-lg font-semibold text-white transition ${cartItems.length === 0
+                className={`block text-center w-full py-3 rounded-lg font-semibold text-white transition ${checkoutItemCount === 0
                     ? 'bg-gray-400 cursor-not-allowed pointer-events-none'
                     : 'bg-yellow-500 hover:bg-yellow-600'
                     }`}
             >
-                {cartItems.length === 0 ? 'Giỏ hàng trống' : 'Thanh Toán'}
+                {checkoutItemCount === 0 ? 'Giỏ hàng trống' : 'Thanh Toán'}
             </Link>
         </div>
     );

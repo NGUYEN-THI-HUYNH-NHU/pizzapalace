@@ -146,6 +146,8 @@ export interface OrderItem {
     sku: string;
     price: number;
     quantity: number;
+    crustName?: string;
+    crustSize?: string;
     selectedOptions: SelectedOption[];
 }
 
@@ -154,11 +156,6 @@ export interface SelectedOption {
     v: string;
     productId?: Id | null;
     sku: string;
-    subOptions: SubOption[];
-}
-
-export interface SubOption {
-    name: string;
-    value: string;
-    price: number;
+    crustName?: string;
+    crustSize?: string;
 }

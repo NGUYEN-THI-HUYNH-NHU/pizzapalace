@@ -6,6 +6,9 @@ import { cn, currencyFormatter, formatDateTime } from "@/lib/utils";
 import { Order, OrderStatus } from "@/type";
 import { io, type Socket } from "socket.io-client";
 import { PAYMENT_LABELS, STATUS_COLOR_MAP, STATUS_LABELS } from "@/lib/order-utils";
+import toast from "react-hot-toast";
+import { CopyIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const STATUS_STEPS = [
     OrderStatus.PENDING,
@@ -87,7 +90,7 @@ const OrderPage = () => {
                 setOrders(Array.isArray(data.orders) ? data.orders : []);
             } catch (error) {
                 console.error("Loi fetch orders:", error);
-                setLoadError("Khong the tai danh sach don hang. Vui long thu lai.");
+                setLoadError("Không thể tải danh sách đơn hàng. Vui lòng thử lại.");
             } finally {
                 setIsLoading(false);
             }
@@ -131,7 +134,7 @@ const OrderPage = () => {
         };
 
         initRealtime().catch((error) => {
-            console.error("Loi khoi tao realtime order:", error);
+            console.error("Lỗi khởi tạo order realtime.", error);
         });
 
         return () => {
@@ -146,10 +149,15 @@ const OrderPage = () => {
         (order) => order.status === OrderStatus.COMPLETED || order.status === OrderStatus.CANCELLED
     );
 
+    const onCopy = (orderId: string) => {
+        navigator.clipboard.writeText(orderId);
+        toast.success("Mã đơn đã được sao chép vào clipboard.");
+    };
+
     if (isLoading) {
         return (
             <div className="mx-auto w-full max-w-5xl py-6">
-                <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-500">Dang tai don hang...</p>
+                <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-500">Đang tải đơn hàng...</p>
             </div>
         );
     }
@@ -188,7 +196,16 @@ const OrderPage = () => {
                                     <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                                         <div>
                                             <p className="text-sm text-slate-500">Mã đơn</p>
-                                            <p className="text-base font-semibold text-slate-800">{order.id}</p>
+                                            <div className="flex flex-row items-center gap-2">
+                                                <p className="text-base font-semibold text-slate-800">{order.id}</p>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => onCopy(order.id)}
+                                                >
+                                                    <CopyIcon className="h-4 w-4" />
+                                                </Button>
+                                            </div>
                                         </div>
                                         <div className="flex items-center gap-3">
                                             {renderStatusBadge(order.status)}
@@ -225,7 +242,7 @@ const OrderPage = () => {
                                                                     className="flex items-center justify-center rounded-full p-1 transition-all duration-300"
                                                                     style={{
                                                                         backgroundColor: isDone
-                                                                            ? "rgb(245 245 245)"
+                                                                            ? "rgb(250 250 250)"
                                                                             : "rgb(226 232 240)",
                                                                     }}
                                                                 >
@@ -305,7 +322,16 @@ const OrderPage = () => {
                             >
                                 <div className="flex flex-wrap items-center justify-between gap-3">
                                     <div className="space-y-1">
-                                        <p className="text-sm text-slate-500">{order.id}</p>
+                                        <div className="flex flex-row items-center gap-2">
+                                            <p className="text-sm text-slate-500">{order.id}</p>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => onCopy(order.id)}
+                                            >
+                                                <CopyIcon className="h-4 w-4" />
+                                            </Button>
+                                        </div>
                                         <p className="text-sm text-slate-700">{formatDateTime(order.createdAt)}</p>
                                     </div>
 
@@ -320,7 +346,7 @@ const OrderPage = () => {
                                 <div className="mt-3 border-t border-dashed border-gray-200 pt-3 text-sm text-slate-600">
                                     {order.orderItems.map((item) => (
                                         <p key={`${order.id}-${item.productId}`}>
-                                            {item.quantity} x {item.productName}
+                                            {item.quantity} x {item.productName} {(item.crustName && item.crustSize) ? `(${item.crustName} - ${item.crustSize})` : ''}
                                         </p>
                                     ))}
                                 </div>

@@ -1,14 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUserFromCookie } from "@/lib/auth-session";
-
-type OrderItem = {
-  id: string;
-  name: string;
-  sku: string;
-  price: number;
-  quantity: number;
-  img: string;
-};
+import { OrderItem } from "@/type";
 
 type OrderData = {
   userId?: string;
@@ -25,7 +17,6 @@ type OrderData = {
   discount?: number;
   totalAmount: number;
 };
-
 
 export async function GET() {
   try {

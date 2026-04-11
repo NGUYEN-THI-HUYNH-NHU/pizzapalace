@@ -24,55 +24,8 @@ type SessionUser = {
   address?: string | null;
 };
 
-type RawCartItem = {
-  id?: string | number;
-  productId?: string | number;
-  sku?: string;
-  name?: string;
-  productName?: string;
-  price?: number;
-  amount?: number;
-  quantity?: number;
-  qty?: number;
-  img?: string;
-  image?: string;
-  size?: string;
-  crust?: string;
-  crustName?: string;
-};
-
-type RawCart = RawCartItem[] | { items?: unknown };
-
-const normalizeCartItems = (raw: RawCart): CartItem[] => {
-  if (!raw) {
-    return [];
-  }
-
-  if (Array.isArray(raw)) {
-    return raw.map((item) => ({
-      id: String(item.id ?? item.productId ?? item.sku ?? Math.random()),
-      name: String(item.name ?? item.productName ?? 'Sản phẩm'),
-      sku: String(item.sku ?? ''),
-      price: Number(item.price ?? item.amount ?? 0),
-      quantity: Number(item.quantity ?? item.qty ?? 1),
-      img: String(item.img ?? item.image ?? 'https://via.placeholder.com/64'),
-      size: typeof item.size === 'string' ? item.size : undefined,
-      crust: typeof item.crust === 'string' ? item.crust : undefined,
-      crustName: typeof item.crustName === 'string' ? item.crustName : undefined,
-    }));
-  }
-
-  const rawObj = raw as { items?: unknown };
-  if (Array.isArray(rawObj.items)) {
-    return normalizeCartItems(rawObj.items as RawCart);
-  }
-
-  return [];
-};
-
-const apiBase = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
 const sessionUrl = '/api/auth/session';
-const cartUrl = apiBase ? (apiBase.endsWith('/api') ? `${apiBase}/cart` : `${apiBase}/api/cart`) : '/api/cart';
+const selectedCartItemsKey = 'pizzapalace-selected-cart-item-ids';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -85,6 +38,7 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState<string>('cash');
   const [agreedToTerms, setAgreedToTerms] = useState<boolean>(false);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [selectedCartItemIds, setSelectedCartItemIds] = useState<string[] | null>(null);
   const [voucherCode, setVoucherCode] = useState<string>('');
   const [appliedVoucher, setAppliedVoucher] = useState<string>('');
   const [voucherMessage, setVoucherMessage] = useState<string>('');
@@ -100,25 +54,72 @@ export default function CheckoutPage() {
 
   // Load cart items from context
   useEffect(() => {
-    if (contextCartItems && contextCartItems.length > 0) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const normalizedItems: CartItem[] = contextCartItems.map((item: any) => ({
-        id: String(item.id ?? ''),
-        name: String(item.name ?? 'Sản phẩm'),
-        sku: String(item.size ?? item.crust ?? ''),
-        price: Number(item.price ?? 0),
-        quantity: Number(item.quantity ?? 1),
-        img: String(item.image ?? item.img ?? 'https://via.placeholder.com/64'),
-        size: typeof item.size === 'string' ? item.size : undefined,
-        crust: typeof item.crust === 'string' ? item.crust : undefined,
-        crustName: typeof item.crustName === 'string' ? item.crustName : undefined,
-      }));
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setCartItems(normalizedItems);
-    } else {
-      setCartItems([]);
+    let active = true;
+
+    try {
+      const storedSelection = localStorage.getItem(selectedCartItemsKey);
+      queueMicrotask(() => {
+        if (!active) return;
+
+        if (storedSelection !== null) {
+          try {
+            const parsedSelection = JSON.parse(storedSelection);
+            if (Array.isArray(parsedSelection)) {
+              setSelectedCartItemIds(parsedSelection.map((itemId) => String(itemId)));
+              return;
+            }
+          } catch (error) {
+            console.warn('Lỗi load selected cart items:', error);
+          }
+        }
+
+        setSelectedCartItemIds(null);
+      });
+    } catch (error) {
+      console.warn('Lỗi load selected cart items:', error);
+      queueMicrotask(() => {
+        if (active) {
+          setSelectedCartItemIds(null);
+        }
+      });
     }
-  }, [contextCartItems]);
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const normalizedItems: CartItem[] = contextCartItems.map((item: any) => ({
+      id: String(item.id ?? ''),
+      name: String(item.name ?? 'Sản phẩm'),
+      sku: String(item.size ?? item.crust ?? ''),
+      price: Number(item.price ?? 0),
+      quantity: Number(item.quantity ?? 1),
+      img: String(item.image ?? item.img ?? 'https://via.placeholder.com/64'),
+      size: typeof item.size === 'string' ? item.size : undefined,
+      crust: typeof item.crust === 'string' ? item.crust : undefined,
+      crustName: typeof item.crustName === 'string' ? item.crustName : undefined,
+    }));
+
+    queueMicrotask(() => {
+      if (!active) return;
+
+      if (selectedCartItemIds === null) {
+        setCartItems(normalizedItems);
+        return;
+      }
+
+      setCartItems(normalizedItems.filter((item) => selectedCartItemIds.includes(item.id)));
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [contextCartItems, selectedCartItemIds]);
 
   // Load user session
   useEffect(() => {
@@ -237,6 +238,7 @@ export default function CheckoutPage() {
       if (response?.orderId) {
         clearCart();
         setCartItems([]);
+        localStorage.removeItem(selectedCartItemsKey);
         localStorage.removeItem('pizzapalace-cart');
         router.push(`/order-success/${response.orderId}`);
       } else {
@@ -408,7 +410,7 @@ export default function CheckoutPage() {
               />
               <button
                 type="button"
-                className="px-4 py-3 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                className="px-4 py-3 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition-colors"
               >
                 Áp dụng
               </button>
@@ -494,7 +496,7 @@ export default function CheckoutPage() {
               type="button"
               onClick={onPlaceOrder}
               className={`w-full py-3 rounded-lg font-medium text-white transition-colors flex items-center justify-center gap-2 ${canPlaceOrder
-                ? 'bg-red-600 hover:bg-red-700'
+                ? 'bg-yellow-500 hover:bg-yellow-600'
                 : 'bg-gray-300 cursor-not-allowed pointer-events-none'
                 }`}
               disabled={!canPlaceOrder}

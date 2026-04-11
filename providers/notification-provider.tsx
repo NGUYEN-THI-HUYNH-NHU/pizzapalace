@@ -211,11 +211,11 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
             addNotification({
                 orderId: incomingOrder.id,
                 status: incomingOrder.status,
-                title: `Đơn hàng ${incomingOrder.id} đã cập nhật`,
+                title: `Đơn hàng ${incomingOrder.id}`,
                 message,
             });
 
-            toast.success(message, { duration: 5000 });
+            toast.success(message, { duration: 5000, position: 'bottom-right' });
         });
 
         return () => {

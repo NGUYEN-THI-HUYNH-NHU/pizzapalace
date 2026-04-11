@@ -1,7 +1,7 @@
 import Link from 'next/link';
 
 type OrderSuccessPageProps = {
-  params: Promise<{ orderId: string }>;
+    params: Promise<{ orderId: string }>;
 };
 
 export default async function OrderSuccessPage({
@@ -10,7 +10,7 @@ export default async function OrderSuccessPage({
     const { orderId } = await params;
 
     return (
-        <main className="max-w-[1170px] mx-auto p-4 md:p-6 pt-[88px] md:pt-[110px] min-h-screen font-sans text-gray-800 bg-gray-50 md:bg-white">
+        <main className="max-w-[1170px] mx-auto p-4 md:p-6 min-h-screen font-sans text-gray-800 bg-gray-50 md:bg-white">
             <div className="bg-white border-0 md:border md:border-gray-200 rounded-2xl p-6 md:p-12 shadow-sm md:shadow-none text-center">
                 <div className="mb-6">
                     <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -36,7 +36,7 @@ export default async function OrderSuccessPage({
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
                     <Link
                         href="/"
-                        className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                        className="px-6 py-3 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors font-medium"
                     >
                         Tiếp tục mua sắm
                     </Link>
