@@ -11,6 +11,7 @@ export interface CartItem {
   image: string;
   quantity: number;
   description?: string;
+  sku?: string;
   size?: string;
   crust?: string;
   crustName?: string;
@@ -22,6 +23,7 @@ interface CartContextType {
   removeFromCart: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
   updateCartItem: (id: string, updates: Partial<Omit<CartItem, 'id'>>) => void;
+  replaceCart: (items: CartItem[]) => void;
   clearCart: () => void;
   getTotalPrice: () => number;
 }
@@ -104,6 +106,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     );
   };
 
+  const replaceCart = (items: CartItem[]) => {
+    setCartItems(items);
+  };
+
   const clearCart = () => {
     setCartItems([]);
   };
@@ -120,6 +126,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         removeFromCart,
         updateQuantity,
         updateCartItem,
+        replaceCart,
         clearCart,
         getTotalPrice,
       }}

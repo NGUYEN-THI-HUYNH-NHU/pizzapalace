@@ -1,15 +1,24 @@
+type SelectedOption = {
+  k: string;
+  v: string;
+  sku: string;
+  productId?: string;
+  crustName?: string;
+  crustSize?: string;
+};
+
 type OrderItem = {
   id: string;
   name: string;
   sku: string;
   price: number;
   quantity: number;
-  img: string;
+  img?: string;
   size?: string;
   crust?: string;
   crustName?: string;
+  selectedOptions: SelectedOption[];
 };
-
 type OrderData = {
   fullName: string;
   phoneNumber: string;
@@ -33,6 +42,8 @@ type OrderResponse = {
 const placeOrder = async (orderData: OrderData): Promise<OrderResponse> => {
   // Use relative path - browser will automatically use current origin
   const URL = '/api/orders';
+  console.log('📤 Gửi request tới /api/orders:', JSON.stringify(orderData, null, 2));
+
 
   const res = await fetch(URL, {
     method: "POST",
@@ -43,7 +54,16 @@ const placeOrder = async (orderData: OrderData): Promise<OrderResponse> => {
   });
 
   if (!res.ok) {
-    throw new Error(`Failed to place order: ${res.status}`);
+    const errorText = await res.text().catch(() => 'Unknown error');
+    console.error('❌ API trả về lỗi:', res.status, errorText);
+    let parsedError = errorText;
+    try {
+      const errorJson = JSON.parse(errorText) as { error?: string; message?: string };
+      parsedError = errorJson.error || errorJson.message || errorText;
+    } catch {
+      parsedError = errorText;
+    }
+    throw new Error(parsedError || `Failed to place order: ${res.status}`);
   }
 
   return res.json();

@@ -2,19 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import placeOrder from '@/actions/place-order';
-import { useCart } from '@/contexts/cart-context';
-
-type CartItem = {
-  id: string;
-  name: string;
-  sku: string;
-  price: number;
-  quantity: number;
-  img: string;
-  size?: string;
-  crust?: string;
-  crustName?: string;
-};
+import { useCart, type CartItem } from '@/contexts/cart-context';
 
 type SessionUser = {
   id: string;
@@ -26,10 +14,11 @@ type SessionUser = {
 
 const sessionUrl = '/api/auth/session';
 const selectedCartItemsKey = 'pizzapalace-selected-cart-item-ids';
+const objectIdPattern = /^[a-fA-F0-9]{24}$/;
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { cartItems: contextCartItems, clearCart } = useCart();
+  const { cartItems: contextCartItems, replaceCart } = useCart();
   const [note, setNote] = useState<string>('');
   const [fullName, setFullName] = useState<string>('');
   const [phoneNumber, setPhoneNumber] = useState<string>('');
@@ -92,18 +81,8 @@ export default function CheckoutPage() {
   useEffect(() => {
     let active = true;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const normalizedItems: CartItem[] = contextCartItems.map((item: any) => ({
-      id: String(item.id ?? ''),
-      name: String(item.name ?? 'Sản phẩm'),
-      sku: String(item.size ?? item.crust ?? ''),
-      price: Number(item.price ?? 0),
-      quantity: Number(item.quantity ?? 1),
-      img: String(item.image ?? item.img ?? 'https://via.placeholder.com/64'),
-      size: typeof item.size === 'string' ? item.size : undefined,
-      crust: typeof item.crust === 'string' ? item.crust : undefined,
-      crustName: typeof item.crustName === 'string' ? item.crustName : undefined,
-    }));
+    // Items từ context đã đúng định dạng CartItem, dùng trực tiếp
+    const normalizedItems: CartItem[] = contextCartItems;
 
     queueMicrotask(() => {
       if (!active) return;
@@ -193,7 +172,8 @@ export default function CheckoutPage() {
     const merged = new Map<string, CartItem>();
 
     items.forEach((item) => {
-      const key = [item.id, item.sku, item.size ?? "", item.crust ?? "", item.crustName ?? "", item.price].join("|");
+      const variantKey = [item.size ?? "", item.crust ?? "", item.crustName ?? ""].join("|");
+      const key = [item.productId, item.variantId ?? "", variantKey, item.price].join("|");
       const existing = merged.get(key);
 
       if (existing) {
@@ -218,6 +198,26 @@ export default function CheckoutPage() {
     try {
       const uniqueCartItems = dedupeCartItems(cartItems);
 
+      // Ánh xạ CartItem từ context sang payload mà API admin đang nhận
+      const orderItems = uniqueCartItems.map((item) => ({
+        id: item.productId || item.id,
+        name: item.name,
+        sku: item.variantId || (item.size ?? item.crust ?? ''),
+        price: item.price,
+        quantity: item.quantity,
+        img: item.image,
+        size: item.size,
+        crust: item.crust,
+        crustName: item.crustName,
+        selectedOptions: [] as Array<{ k: string; v: string; sku: string; productId?: string; crustName?: string; crustSize?: string }>,
+      }));
+
+      const hasInvalidProductId = orderItems.some((item) => !objectIdPattern.test(String(item.id ?? '')));
+      if (hasInvalidProductId) {
+        alert('Có sản phẩm trong giỏ bị thiếu mã sản phẩm hợp lệ. Vui lòng xóa và thêm lại sản phẩm trước khi thanh toán.');
+        return;
+      }
+
       const orderData = {
         fullName,
         phoneNumber,
@@ -225,7 +225,7 @@ export default function CheckoutPage() {
         address,
         note,
         paymentMethod,
-        cartItems: uniqueCartItems,
+        cartItems: orderItems,
         subTotal: uniqueCartItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
         shippingFee,
         totalAmount: Math.max(0, uniqueCartItems.reduce((sum, item) => sum + item.price * item.quantity, 0) + shippingFee),
@@ -236,10 +236,14 @@ export default function CheckoutPage() {
       console.log('✅ Phản hồi từ server:', response);
 
       if (response?.orderId) {
-        clearCart();
+        const selectedIdsForCheckout = new Set(
+          (selectedCartItemIds ?? cartItems.map((item) => item.id)).map((itemId) => String(itemId))
+        );
+        const remainingCartItems = contextCartItems.filter((item) => !selectedIdsForCheckout.has(String(item.id)));
+
+        replaceCart(remainingCartItems);
         setCartItems([]);
         localStorage.removeItem(selectedCartItemsKey);
-        localStorage.removeItem('pizzapalace-cart');
         router.push(`/order-success/${response.orderId}`);
       } else {
         console.error('❌ Không nhận được orderId từ server');
@@ -434,10 +438,10 @@ export default function CheckoutPage() {
             <div className="flex flex-col gap-3 pb-4 text-black">
               {cartItems.length ? cartItems.map((item) => (
                 <div key={item.id} className="flex items-center gap-3">
-                  <img src={item.img || 'https://via.placeholder.com/64'} alt={item.name} className="w-12 h-12 object-cover rounded" />
+                  <img src={item.image || 'https://via.placeholder.com/64'} alt={item.name} className="w-12 h-12 object-cover rounded" />
                   <div className="flex-1">
                     <p className="text-sm font-medium">{item.name}</p>
-                    <p className="text-xs text-gray-500">{item.sku}</p>
+                    <p className="text-xs text-gray-500">{item.variantId || item.size || item.crust || ''}</p>
                     <div className="mt-1 flex items-center gap-2">
                       <button type="button" className="px-2 py-1 border rounded" onClick={() => updateQuantity(item.id, item.quantity - 1)}>-</button>
                       <span>{item.quantity}</span>
