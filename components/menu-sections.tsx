@@ -172,6 +172,14 @@ export default function MenuSections({ sections }: MenuSectionsProps) {
     }, []);
 
     useEffect(() => {
+        if (!activeSection) {
+            return;
+        }
+
+        updateHashWithoutPush(activeSection);
+    }, [activeSection]);
+
+    useEffect(() => {
         const elements = sectionIds
             .map((id) => document.getElementById(id))
             .filter((element): element is HTMLElement => Boolean(element));
@@ -205,8 +213,6 @@ export default function MenuSections({ sections }: MenuSectionsProps) {
                 if (current === nextActiveId) {
                     return current;
                 }
-
-                updateHashWithoutPush(nextActiveId);
                 return nextActiveId;
             });
         };

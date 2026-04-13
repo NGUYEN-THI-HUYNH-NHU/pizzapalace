@@ -64,8 +64,8 @@ const Tools = () => {
                 >
                     <Bell className="h-6 w-6 cursor-pointer" strokeWidth={1.9} />
                     {unreadCount > 0 ? (
-                        <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 text-[11px] font-semibold text-white">
-                            {unreadCount}
+                        <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-yellow-500 px-1.5 text-[11px] font-semibold text-white">
+                            {unreadCount > 9 ? '9+' : `${unreadCount}`}
                         </span>
                     ) : null}
                 </button>
