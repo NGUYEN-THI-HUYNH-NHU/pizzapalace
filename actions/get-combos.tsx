@@ -10,7 +10,9 @@ const getCombos = async (category?: Category): Promise<Product[]> => {
         throw new Error(`Failed to fetch products: ${res.status}`);
     }
 
-    return res.json();
+    const products = (await res.json()) as Product[];
+
+    return products.filter((product) => product.isAvailable);
 };
 
 export default getCombos;

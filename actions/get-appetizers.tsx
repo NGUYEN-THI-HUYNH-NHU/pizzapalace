@@ -1,8 +1,8 @@
 import { Product } from "@/type";
 
-const URL = `${process.env.NEXT_PUBLIC_API_URL}/beverages`;
+const URL = `${process.env.NEXT_PUBLIC_API_URL}/appetizers`;
 
-const getBeverages = async (): Promise<Product[]> => {
+const getAppetizers = async (): Promise<Product[]> => {
     const res = await fetch(URL, { cache: "no-store" });
 
     if (!res.ok) {
@@ -14,4 +14,4 @@ const getBeverages = async (): Promise<Product[]> => {
     return products.filter((product) => product.isAvailable);
 };
 
-export default getBeverages;
+export default getAppetizers;

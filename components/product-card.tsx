@@ -80,6 +80,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                 product={product}
                 open={open}
                 onClose={() => setOpen(false)}
+                isEditing={false}
             />
         </>
     );
