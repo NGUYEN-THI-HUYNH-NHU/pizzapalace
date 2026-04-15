@@ -36,6 +36,7 @@ export default async function ComboPage({ params, searchParams }: ComboPageProps
             combo={combo}
             catalog={catalog}
             initialQuantity={parseQuantity(query.quantity)}
+            editComboId={comboId}
         />
     );
 }

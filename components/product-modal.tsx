@@ -195,9 +195,9 @@ export default function ProductModal({ product, open, onClose, editItem, isEditi
           </div>
 
           {/* CONTENT */}
-          <div className="order-2 flex h-full min-h-0 flex-1 flex-col">
-            <div className="flex-1 overflow-y-auto p-5 md:p-8">
-              <h2 className="text-2xl font-bold text-gray-800 md:text-3xl">{product.name}</h2>
+          <div className="order-2 flex h-full min-h-0 flex-1 flex-col px-5 md:px-8">
+            <div className="flex-1 overflow-y-auto">
+              <h2 className="text-2xl py-2 font-bold text-gray-800 md:text-3xl">{product.name}</h2>
               <p className="mt-2 text-sm text-gray-600">{product.desc}</p>
 
               {product.tags.length > 0 && (
@@ -213,8 +213,13 @@ export default function ProductModal({ product, open, onClose, editItem, isEditi
                 <div className="mt-6">
                   <h3 className="mb-2 text-base font-semibold text-gray-700">Kích thước</h3>
                   {comboConfig?.requiredSize ? (
-                    <div className="rounded-lg border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm font-medium text-yellow-700">
-                      Bắt buộc: {comboConfig.requiredSize}
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      <button
+                        className="rounded-lg border px-3 py-2 text-sm bg-yellow-500 text-white"
+                        disabled={true}
+                      >
+                        {comboConfig.requiredSize}
+                      </button>
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -265,45 +270,51 @@ export default function ProductModal({ product, open, onClose, editItem, isEditi
               )}
             </div>
 
-            <div className="border rounded-2xl mx-2 mb-2 bg-white p-4 md:p-3">
-              <div className="flex items-center gap-3">
-                {!isComboMode && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      className="h-11 w-11 rounded-lg border border-gray-300 text-lg font-semibold text-yellow-500"
-                    >
-                      -
-                    </button>
-                    <span className="w-8 text-center text-base font-medium">{quantity}</span>
-                    <button
-                      type="button"
-                      onClick={() => setQuantity(quantity + 1)}
-                      className="h-11 w-11 rounded-lg border border-gray-300 text-lg font-semibold text-yellow-500"
-                    >
-                      +
-                    </button>
-                  </>
-                )}
-
+            <div className="border rounded-2xl my-2 bg-white p-4 md:p-3">
+              {isComboMode ? (
                 <button
                   type="button"
                   onClick={handleAddToCart}
-                  className="ml-auto w-full max-w-md rounded-lg bg-yellow-500 py-3 text-sm font-semibold text-white"
+                  className="w-full rounded-lg bg-yellow-500 py-3 text-sm font-semibold text-white"
                 >
                   {comboConfig
                     ? `${comboConfig.hasExistingSelection ? "Cập nhật lựa chọn" : "Chọn sản phẩm"} - ${currencyFormatter.format(finalPrice)}`
-                    : isEditing
+                    : `Thêm vào giỏ hàng - ${currencyFormatter.format(totalPrice)}`}
+                </button>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    className="h-11 w-11 rounded-lg border border-gray-300 text-lg font-semibold text-yellow-500"
+                  >
+                    -
+                  </button>
+                  <span className="w-8 text-center text-base font-medium">{quantity}</span>
+                  <button
+                    type="button"
+                    onClick={() => setQuantity(quantity + 1)}
+                    className="h-11 w-11 rounded-lg border border-gray-300 text-lg font-semibold text-yellow-500"
+                  >
+                    +
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleAddToCart}
+                    className="flex-1 w-full max-w-md rounded-lg bg-yellow-500 py-3 text-sm font-semibold text-white"
+                  >
+                    {isEditing
                       ? `Cập nhật giỏ hàng - ${currencyFormatter.format(totalPrice)}`
                       : `Thêm vào giỏ hàng - ${currencyFormatter.format(totalPrice)}`}
-                </button>
-              </div>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
         </div>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 }

@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { CartItem } from '@/contexts/cart-context';
 import { useCart } from '@/contexts/cart-context';
 import { Trash2 } from 'lucide-react';
 import ProductModal from './product-modal';
-import { Product } from '@/type';
+import { Product, Category } from '@/type';
 
 interface CartItemProps {
     item: CartItem;
@@ -15,8 +16,20 @@ interface CartItemProps {
 }
 
 export function CartItemComponent({ item, checked, onCheckedChange, product }: CartItemProps) {
+    const router = useRouter();
     const { removeFromCart, updateQuantity } = useCart();
     const [editOpen, setEditOpen] = useState(false);
+
+    const handleEditClick = () => {
+        if (product?.category === Category.COMBO) {
+            if (item.selectedOptions) {
+                localStorage.setItem(`combo-edit-${item.productId}`, JSON.stringify(item.selectedOptions));
+            }
+            router.push(`/combo/${item.productId}?quantity=${item.quantity}`);
+        } else {
+            setEditOpen(true);
+        }
+    };
 
     return (
         <div className={`flex flex-col gap-4 rounded-2xl border p-4 transition ${checked ? 'border-yellow-500 bg-yellow-50/40' : 'border-gray-200 bg-white'}`}>
@@ -47,7 +60,7 @@ export function CartItemComponent({ item, checked, onCheckedChange, product }: C
                     )}
                     {product && (
                         <button
-                            onClick={() => setEditOpen(true)}
+                            onClick={handleEditClick}
                             className="text-sm text-yellow-500 font-medium mt-1 hover:underline"
                         >
                             Chỉnh sửa
@@ -95,7 +108,7 @@ export function CartItemComponent({ item, checked, onCheckedChange, product }: C
                 </button>
             </div>
 
-            {product && (
+            {product && product.category !== Category.COMBO && (
                 <ProductModal
                     product={product}
                     open={editOpen}

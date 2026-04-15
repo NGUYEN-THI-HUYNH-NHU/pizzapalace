@@ -1,8 +1,7 @@
 'use client';
 
-import { useMemo, useState } from "react";
-import Link from "next/link";
-import { CheckCircle2, Circle, ArrowLeft, PlusCircle } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
+import { CheckCircle2, Circle, PlusCircle } from "lucide-react";
 import toast from "react-hot-toast";
 
 import ProductModal from "@/components/product-modal";
@@ -22,10 +21,20 @@ type SlotSelection = {
     extraPrice: number;
 };
 
+type SavedSelectedOption = {
+    k: string;
+    v: string;
+    productId: string;
+    sku: string;
+    crustName?: string;
+    crustSize?: string;
+};
+
 type ComboBuilderProps = {
     combo: Product;
     catalog: Product[];
     initialQuantity: number;
+    editComboId?: string;
 };
 
 const normalizeQuantity = (value: number) => {
@@ -36,11 +45,11 @@ const normalizeQuantity = (value: number) => {
     return Math.max(1, Math.floor(value));
 };
 
-export default function ComboBuilder({ combo, catalog, initialQuantity }: ComboBuilderProps) {
+export default function ComboBuilder({ combo, catalog, initialQuantity, editComboId }: ComboBuilderProps) {
     const router = useRouter();
     const { addToCart } = useCart();
     const [activeSlotIndex, setActiveSlotIndex] = useState(0);
-    const [quantity, setQuantity] = useState(normalizeQuantity(initialQuantity));
+    const [quantity] = useState(normalizeQuantity(initialQuantity));
     const [selections, setSelections] = useState<Record<number, SlotSelection>>({});
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
@@ -48,7 +57,59 @@ export default function ComboBuilder({ combo, catalog, initialQuantity }: ComboB
         return new Map(catalog.map((item) => [item.id, item]));
     }, [catalog]);
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     const slots = combo.comboDetails?.slots ?? [];
+
+    // Restore saved selections from localStorage when editing
+    useEffect(() => {
+        if (!editComboId) {
+            return;
+        }
+
+        const storageKey = `combo-edit-${editComboId}`;
+        const savedData = localStorage.getItem(storageKey);
+
+        if (!savedData) {
+            return;
+        }
+
+        try {
+            const savedOptions: SavedSelectedOption[] = JSON.parse(savedData);
+            const restoredSelections: Record<number, SlotSelection> = {};
+
+            savedOptions.forEach((savedOption) => {
+                const slotIndex = slots.findIndex((slot) => slot.name === savedOption.k);
+
+                if (slotIndex === -1) {
+                    return;
+                }
+
+                const slot = slots[slotIndex];
+                const option = slot.options.find((opt) => opt.productId === savedOption.productId);
+                const product = productMap.get(savedOption.productId);
+
+                if (!option || !product) {
+                    return;
+                }
+
+                restoredSelections[slotIndex] = {
+                    slotName: slot.name,
+                    option,
+                    product,
+                    size: savedOption.crustSize,
+                    crust: savedOption.crustName,
+                    crustName: savedOption.crustName,
+                    sku: savedOption.sku,
+                    extraPrice: 0, // Will recalculate based on variant
+                };
+            });
+
+            setSelections(restoredSelections);
+            localStorage.removeItem(storageKey);
+        } catch (error) {
+            console.error("Failed to restore combo selections:", error);
+        }
+    }, [editComboId, slots, productMap]);
     const activeSlot = slots[activeSlotIndex];
 
     const activeSlotProducts = useMemo(() => {
@@ -183,45 +244,16 @@ export default function ComboBuilder({ combo, catalog, initialQuantity }: ComboB
 
     return (
         <div className="mx-auto w-full max-w-7xl space-y-5 py-6">
-            <div>
-                <Link href="/" className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-yellow-600">
-                    <ArrowLeft className="h-4 w-4" />
-                    Quay lại menu
-                </Link>
-            </div>
-
-            <div className="grid gap-5 lg:grid-cols-[360px_minmax(0,1fr)]">
-                <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4">
-                    <div className="rounded-xl border border-yellow-100 bg-yellow-50 p-3">
+            <div className="grid items-start gap-5 lg:grid-cols-[360px_minmax(0,1fr)]">
+                <section className="flex h-fit self-start flex-col rounded-2xl border border-slate-200 bg-white p-4">
+                    <div className="rounded-xl">
                         <h1 className="text-xl font-bold text-slate-800">{combo.name}</h1>
-                        <p className="mt-1 whitespace-pre-line text-sm text-slate-600">{combo.desc}</p>
-                        <p className="mt-2 text-sm font-semibold text-yellow-700">
+                        <p className="mt-2 text-sm font-semibold text-yellow-600">
                             Giá combo: {currencyFormatter.format(combo.price)}
                         </p>
                     </div>
 
-                    <div className="flex items-center justify-between rounded-xl border border-slate-200 p-3">
-                        <span className="text-sm font-medium text-slate-700">Số lượng combo</span>
-                        <div className="inline-flex items-center gap-2">
-                            <button
-                                type="button"
-                                onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
-                                className="h-9 w-9 rounded-lg border border-slate-300 text-lg font-semibold text-yellow-500"
-                            >
-                                -
-                            </button>
-                            <span className="w-8 text-center text-sm font-semibold">{quantity}</span>
-                            <button
-                                type="button"
-                                onClick={() => setQuantity((prev) => prev + 1)}
-                                className="h-9 w-9 rounded-lg border border-slate-300 text-lg font-semibold text-yellow-500"
-                            >
-                                +
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="space-y-3">
+                    <div className="mt-4 flex-1 min-h-0 space-y-3 overflow-y-auto pr-1">
                         {slots.map((slot, index) => {
                             const slotSelection = selections[index];
                             const isActive = activeSlotIndex === index;
@@ -261,9 +293,9 @@ export default function ComboBuilder({ combo, catalog, initialQuantity }: ComboB
                                                     </p>
                                                     {slotSelection && (
                                                         <p className="text-[11px] text-slate-500">
-                                                            {slotSelection.size ? `Size ${slotSelection.size}` : ""}
-                                                            {slotSelection.crustName ? ` • Đế ${slotSelection.crustName}` : ""}
-                                                            {slotSelection.extraPrice > 0 ? ` • +${currencyFormatter.format(slotSelection.extraPrice)}` : ""}
+                                                            {slotSelection.size ? `Cỡ ${slotSelection.size} ` : ""}
+                                                            &bull; {slotSelection.crustName ? ` Đế ${slotSelection.crustName}` : ""}
+                                                            {slotSelection.extraPrice > 0 ? ` +${currencyFormatter.format(slotSelection.extraPrice)}` : ""}
                                                         </p>
                                                     )}
                                                 </div>
@@ -276,22 +308,23 @@ export default function ComboBuilder({ combo, catalog, initialQuantity }: ComboB
                     </div>
                 </section>
 
-                <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4">
+                <section className="flex max-h-[calc(100vh-7rem)] min-h-0 self-start flex-col space-y-4 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4">
                     <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 p-3">
                         <div>
-                            <p className="text-sm text-slate-500">Đang chọn</p>
                             <p className="text-base font-semibold text-slate-800">
                                 {activeSlot ? `Slot ${activeSlotIndex + 1}: ${activeSlot.name}` : "Không có slot"}
                             </p>
                         </div>
                         <div className="text-right">
-                            <p className="text-xs text-slate-500">Giá thêm từ lựa chọn</p>
-                            <p className="text-sm font-semibold text-slate-700">{currencyFormatter.format(extraPrice)}</p>
+                            <p className="text-xs text-slate-500">
+                                Giá thêm từ lựa chọn:
+                                <span className="text-sm font-semibold text-slate-700"> {currencyFormatter.format(extraPrice)}</span>
+                            </p>
                         </div>
                     </div>
 
-                    <div className="grid gap-4 md:grid-cols-2">
-                        {activeSlotProducts.map(({ option, product }) => {
+                    <div className="grid flex-1 min-h-0 gap-4 overflow-y-auto pr-1 md:grid-cols-2">
+                        {activeSlotProducts.map(({ product }) => {
                             const currentSelection = selections[activeSlotIndex];
                             const isSelected = currentSelection?.product.id === product.id;
 
@@ -313,9 +346,7 @@ export default function ComboBuilder({ combo, catalog, initialQuantity }: ComboB
                                                 <p className="line-clamp-2 text-base font-semibold text-slate-800">{product.name}</p>
                                                 <p className="mt-1 line-clamp-2 text-xs text-slate-600">{product.desc}</p>
                                                 <p className="mt-2 text-sm font-semibold text-yellow-600">{currencyFormatter.format(0)}</p>
-                                                {option.sizeRequirement && (
-                                                    <p className="mt-1 text-[11px] text-slate-500">Size bắt buộc: {option.sizeRequirement}</p>
-                                                )}
+
                                             </div>
 
                                             <PlusCircle className="h-8 w-8 fill-yellow-500 text-white" strokeWidth={1} />
