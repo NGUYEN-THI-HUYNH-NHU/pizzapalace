@@ -1,17 +1,22 @@
 'use client';
 
+import { useState } from 'react';
 import { CartItem } from '@/contexts/cart-context';
 import { useCart } from '@/contexts/cart-context';
 import { Trash2 } from 'lucide-react';
+import ProductModal from './product-modal';
+import { Product } from '@/type';
 
 interface CartItemProps {
     item: CartItem;
     checked: boolean;
     onCheckedChange: (itemId: string, checked: boolean) => void;
+    product?: Product;
 }
 
-export function CartItemComponent({ item, checked, onCheckedChange }: CartItemProps) {
+export function CartItemComponent({ item, checked, onCheckedChange, product }: CartItemProps) {
     const { removeFromCart, updateQuantity } = useCart();
+    const [editOpen, setEditOpen] = useState(false);
 
     return (
         <div className={`flex flex-col gap-4 rounded-2xl border p-4 transition ${checked ? 'border-yellow-500 bg-yellow-50/40' : 'border-gray-200 bg-white'}`}>
@@ -39,6 +44,14 @@ export function CartItemComponent({ item, checked, onCheckedChange }: CartItemPr
                     {item.size && <p className="text-sm text-gray-500">Cỡ: {item.size}</p>}
                     {(item.crustName || item.crust) && (
                         <p className="text-sm text-gray-500">Đế: {item.crustName || item.crust}</p>
+                    )}
+                    {product && (
+                        <button
+                            onClick={() => setEditOpen(true)}
+                            className="text-sm text-yellow-500 font-medium mt-1 hover:underline"
+                        >
+                            Chỉnh sửa
+                        </button>
                     )}
                 </div>
 
@@ -81,6 +94,16 @@ export function CartItemComponent({ item, checked, onCheckedChange }: CartItemPr
                     <Trash2 className='w-4 h-4' />
                 </button>
             </div>
+
+            {product && (
+                <ProductModal
+                    product={product}
+                    open={editOpen}
+                    onClose={() => setEditOpen(false)}
+                    editItem={{ size: item.size, crust: item.crust, quantity: item.quantity }}
+                    isEditing={true}
+                />
+            )}
         </div>
     );
 }

@@ -7,6 +7,7 @@ import { useCart } from '@/contexts/cart-context';
 import { CartItemComponent } from '@/components/cart-item';
 import { OrderSummary } from '@/components/order-summary';
 import { ArrowLeft } from 'lucide-react';
+import { Product } from '@/type';
 
 const SELECTED_CART_ITEMS_KEY = 'pizzapalace-selected-cart-item-ids';
 
@@ -14,7 +15,18 @@ export default function CartPage() {
   const router = useRouter();
   const { cartItems } = useCart();
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const hasInitializedSelection = useRef(false);
+
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/pizzas').then(r => r.json()).catch(() => []),
+      fetch('/api/beverages').then(r => r.json()).catch(() => []),
+      fetch('/api/combos').then(r => r.json()).catch(() => []),
+    ]).then(([pizzas, beverages, combos]) => {
+      setProducts([...pizzas, ...beverages, ...combos]);
+    });
+  }, []);
 
   useEffect(() => {
     if (cartItems.length === 0) {
@@ -147,6 +159,7 @@ export default function CartPage() {
                     <CartItemComponent
                       key={item.id}
                       item={item}
+                      product={products.find((p) => p.id === item.productId)}
                       checked={selectedItemIds.includes(item.id)}
                       onCheckedChange={toggleItem}
                     />
