@@ -15,6 +15,14 @@ export interface CartItem {
   size?: string;
   crust?: string;
   crustName?: string;
+  selectedOptions?: Array<{
+    k: string;
+    v: string;
+    productId?: string;
+    sku: string;
+    crustName?: string;
+    crustSize?: string;
+  }>;
 }
 
 interface CartContextType {
