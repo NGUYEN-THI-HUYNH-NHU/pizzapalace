@@ -8,16 +8,35 @@ import toast from "react-hot-toast";
 import Tag from "./ui/tag";
 import { currencyFormatter } from "@/lib/utils";
 
+type ComboSelection = {
+  productId: string;
+  productName: string;
+  image: string;
+  size?: string;
+  crust?: string;
+  crustName?: string;
+  sku?: string;
+  extraPrice: number;
+};
+
+type ComboConfig = {
+  requiredSize?: string;
+  hasExistingSelection?: boolean;
+  onConfirm: (selection: ComboSelection) => void;
+};
+
 type ProductModalProps = {
   product: Product | null;
   open: boolean;
   onClose: () => void;
   editItem?: { size?: string; crust?: string; quantity: number };
   isEditing: boolean;
+  comboConfig?: ComboConfig;
 };
 
-export default function ProductModal({ product, open, onClose, editItem, isEditing }: ProductModalProps) {
+export default function ProductModal({ product, open, onClose, editItem, isEditing, comboConfig }: ProductModalProps) {
   const { addToCart, removeFromCart } = useCart();
+  const isComboMode = Boolean(comboConfig);
 
   const sizes = product?.pizzaDetails?.sizes || [];
   const variants = useMemo(() => product?.pizzaDetails?.variants || [], [product]);
@@ -48,7 +67,8 @@ export default function ProductModal({ product, open, onClose, editItem, isEditi
       return;
     }
 
-    const defaultSize = editItem?.size || product.pizzaDetails?.sizes?.[0] || variants[0]?.size || "";
+    const requiredSize = comboConfig?.requiredSize;
+    const defaultSize = requiredSize || editItem?.size || product.pizzaDetails?.sizes?.[0] || variants[0]?.size || "";
     const defaultCrust = editItem?.crust
       || variants.find((variant) => variant.size === defaultSize && variant.isAvailable)?.crust
       || variants.find((variant) => variant.size === defaultSize)?.crust
@@ -57,8 +77,8 @@ export default function ProductModal({ product, open, onClose, editItem, isEditi
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectedSize(defaultSize);
     setSelectedCrust(defaultCrust);
-    setQuantity(editItem?.quantity || 1);
-  }, [product, editItem, variants]);
+    setQuantity(isComboMode ? 1 : editItem?.quantity || 1);
+  }, [product, editItem, variants, comboConfig?.requiredSize, isComboMode]);
 
   useEffect(() => {
     if (crustOptions.length === 0) {
@@ -86,12 +106,45 @@ export default function ProductModal({ product, open, onClose, editItem, isEditi
     );
   }, [variants, selectedSize, selectedCrust]);
 
-  const finalPrice = selectedVariant?.price || product?.price || 0;
+  const lowestCrustPrice = useMemo(() => {
+    if (!isComboMode || !selectedSize) {
+      return 0;
+    }
+
+    const prices = variants
+      .filter((variant) => variant.size === selectedSize && variant.isAvailable)
+      .map((variant) => variant.price);
+
+    if (prices.length === 0) {
+      return 0;
+    }
+
+    return Math.min(...prices);
+  }, [isComboMode, selectedSize, variants]);
+
+  const finalPrice = isComboMode
+    ? Math.max(0, (selectedVariant?.price || 0) - lowestCrustPrice)
+    : selectedVariant?.price || product?.price || 0;
   const totalPrice = finalPrice * quantity;
 
   if (!open || !product) return null;
 
   const handleAddToCart = () => {
+    if (comboConfig) {
+      comboConfig.onConfirm({
+        productId: product.id,
+        productName: product.name,
+        image: product.img,
+        size: selectedSize || undefined,
+        crust: selectedCrust || undefined,
+        crustName: selectedVariant?.crustName || selectedCrust || undefined,
+        sku: selectedVariant?.sku,
+        extraPrice: finalPrice,
+      });
+      onClose();
+      return;
+    }
+
     // Nếu đang edit thì xóa item cũ trước
     if (editItem) {
       removeFromCart(product!.id);
@@ -159,20 +212,26 @@ export default function ProductModal({ product, open, onClose, editItem, isEditi
               {sizes.length > 0 && (
                 <div className="mt-6">
                   <h3 className="mb-2 text-base font-semibold text-gray-700">Kích thước</h3>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    {sizes.map((size) => (
-                      <button
-                        key={size}
-                        onClick={() => setSelectedSize(size)}
-                        className={`rounded-lg border px-3 py-2 text-sm ${selectedSize === size
-                          ? "bg-yellow-500 text-white"
-                          : "border-gray-300"
-                          }`}
-                      >
-                        {size}
-                      </button>
-                    ))}
-                  </div>
+                  {comboConfig?.requiredSize ? (
+                    <div className="rounded-lg border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm font-medium text-yellow-700">
+                      Bắt buộc: {comboConfig.requiredSize}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {sizes.map((size) => (
+                        <button
+                          key={size}
+                          onClick={() => setSelectedSize(size)}
+                          className={`rounded-lg border px-3 py-2 text-sm ${selectedSize === size
+                            ? "bg-yellow-500 text-white"
+                            : "border-gray-300"
+                            }`}
+                        >
+                          {size}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -191,7 +250,13 @@ export default function ProductModal({ product, open, onClose, editItem, isEditi
                             } ${!option.isAvailable ? "opacity-50" : ""}`}
                         >
                           <span>{option.name} ({selectedSize})</span>
-                          <span>{option.isAvailable ? currencyFormatter.format(option.price) : "Hết"}</span>
+                          <span>
+                            {!option.isAvailable
+                              ? "Hết"
+                              : isComboMode
+                                ? currencyFormatter.format(Math.max(0, option.price - lowestCrustPrice))
+                                : currencyFormatter.format(option.price)}
+                          </span>
                         </button>
                       );
                     })}
@@ -202,28 +267,36 @@ export default function ProductModal({ product, open, onClose, editItem, isEditi
 
             <div className="border rounded-2xl mx-2 mb-2 bg-white p-4 md:p-3">
               <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="h-11 w-11 rounded-lg border border-gray-300 text-lg font-semibold text-yellow-500"
-                >
-                  -
-                </button>
-                <span className="w-8 text-center text-base font-medium">{quantity}</span>
-                <button
-                  type="button"
-                  onClick={() => setQuantity(quantity + 1)}
-                  className="h-11 w-11 rounded-lg border border-gray-300 text-lg font-semibold text-yellow-500"
-                >
-                  +
-                </button>
+                {!isComboMode && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      className="h-11 w-11 rounded-lg border border-gray-300 text-lg font-semibold text-yellow-500"
+                    >
+                      -
+                    </button>
+                    <span className="w-8 text-center text-base font-medium">{quantity}</span>
+                    <button
+                      type="button"
+                      onClick={() => setQuantity(quantity + 1)}
+                      className="h-11 w-11 rounded-lg border border-gray-300 text-lg font-semibold text-yellow-500"
+                    >
+                      +
+                    </button>
+                  </>
+                )}
 
                 <button
                   type="button"
                   onClick={handleAddToCart}
                   className="ml-auto w-full max-w-md rounded-lg bg-yellow-500 py-3 text-sm font-semibold text-white"
                 >
-                  {isEditing ? `Cập nhật giỏ hàng - ${currencyFormatter.format(totalPrice)}` : `Thêm vào giỏ hàng - ${currencyFormatter.format(totalPrice)}`}
+                  {comboConfig
+                    ? `${comboConfig.hasExistingSelection ? "Cập nhật lựa chọn" : "Chọn sản phẩm"} - ${currencyFormatter.format(finalPrice)}`
+                    : isEditing
+                      ? `Cập nhật giỏ hàng - ${currencyFormatter.format(totalPrice)}`
+                      : `Thêm vào giỏ hàng - ${currencyFormatter.format(totalPrice)}`}
                 </button>
               </div>
             </div>

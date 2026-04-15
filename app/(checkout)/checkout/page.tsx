@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import placeOrder from '@/actions/place-order';
 import { useCart, type CartItem } from '@/contexts/cart-context';
@@ -173,7 +173,8 @@ export default function CheckoutPage() {
 
     items.forEach((item) => {
       const variantKey = [item.size ?? "", item.crust ?? "", item.crustName ?? ""].join("|");
-      const key = [item.productId, item.variantId ?? "", variantKey, item.price].join("|");
+      const selectedOptionsKey = JSON.stringify(item.selectedOptions ?? []);
+      const key = [item.productId, item.variantId ?? "", variantKey, item.price, selectedOptionsKey].join("|");
       const existing = merged.get(key);
 
       if (existing) {
@@ -209,7 +210,14 @@ export default function CheckoutPage() {
         size: item.size,
         crust: item.crust,
         crustName: item.crustName,
-        selectedOptions: [] as Array<{ k: string; v: string; sku: string; productId?: string; crustName?: string; crustSize?: string }>,
+        selectedOptions: (item.selectedOptions ?? []).map((option) => ({
+          k: option.k,
+          v: option.v,
+          sku: option.sku,
+          productId: option.productId,
+          crustName: option.crustName,
+          crustSize: option.crustSize,
+        })),
       }));
 
       const hasInvalidProductId = orderItems.some((item) => !objectIdPattern.test(String(item.id ?? '')));

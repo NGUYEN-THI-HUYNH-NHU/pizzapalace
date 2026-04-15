@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from "react";
-import { Product } from "@/type";
+import { Category, Product } from "@/type";
 import { PlusCircle } from "lucide-react";
 import Tag from "./ui/tag";
 import ProductModal from "./product-modal";
+import ComboModal from "./combo-modal";
 import { currencyFormatter } from "@/lib/utils";
 
 type ProductCardProps = {
@@ -13,6 +14,7 @@ type ProductCardProps = {
 
 export default function ProductCard({ product }: ProductCardProps) {
     const [open, setOpen] = useState(false);
+    const isCombo = product.category === Category.COMBO;
 
     const handleOpenModal = (e: React.MouseEvent<HTMLButtonElement>) => {
         e.stopPropagation();
@@ -78,9 +80,15 @@ export default function ProductCard({ product }: ProductCardProps) {
 
             <ProductModal
                 product={product}
-                open={open}
+                open={open && !isCombo}
                 onClose={() => setOpen(false)}
                 isEditing={false}
+            />
+
+            <ComboModal
+                combo={isCombo ? product : null}
+                open={open && isCombo}
+                onClose={() => setOpen(false)}
             />
         </>
     );

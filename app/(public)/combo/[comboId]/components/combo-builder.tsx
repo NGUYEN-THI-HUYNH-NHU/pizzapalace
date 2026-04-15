@@ -1,0 +1,365 @@
+'use client';
+
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import { CheckCircle2, Circle, ArrowLeft, PlusCircle } from "lucide-react";
+import toast from "react-hot-toast";
+
+import ProductModal from "@/components/product-modal";
+import { useCart } from "@/contexts/cart-context";
+import { currencyFormatter } from "@/lib/utils";
+import { ComboOption, Product } from "@/type";
+import { useRouter } from "next/navigation";
+
+type SlotSelection = {
+    slotName: string;
+    option: ComboOption;
+    product: Product;
+    size?: string;
+    crust?: string;
+    crustName?: string;
+    sku?: string;
+    extraPrice: number;
+};
+
+type ComboBuilderProps = {
+    combo: Product;
+    catalog: Product[];
+    initialQuantity: number;
+};
+
+const normalizeQuantity = (value: number) => {
+    if (!Number.isFinite(value)) {
+        return 1;
+    }
+
+    return Math.max(1, Math.floor(value));
+};
+
+export default function ComboBuilder({ combo, catalog, initialQuantity }: ComboBuilderProps) {
+    const router = useRouter();
+    const { addToCart } = useCart();
+    const [activeSlotIndex, setActiveSlotIndex] = useState(0);
+    const [quantity, setQuantity] = useState(normalizeQuantity(initialQuantity));
+    const [selections, setSelections] = useState<Record<number, SlotSelection>>({});
+    const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+
+    const productMap = useMemo(() => {
+        return new Map(catalog.map((item) => [item.id, item]));
+    }, [catalog]);
+
+    const slots = combo.comboDetails?.slots ?? [];
+    const activeSlot = slots[activeSlotIndex];
+
+    const activeSlotProducts = useMemo(() => {
+        if (!activeSlot) {
+            return [] as Array<{ option: ComboOption; product: Product }>;
+        }
+
+        return activeSlot.options
+            .map((option) => {
+                const product = productMap.get(option.productId);
+                if (!product) {
+                    return null;
+                }
+
+                return { option, product };
+            })
+            .filter((item): item is { option: ComboOption; product: Product } => Boolean(item));
+    }, [activeSlot, productMap]);
+
+    const activeOptionByProductId = useMemo(() => {
+        const map = new Map<string, ComboOption>();
+
+        if (!activeSlot) {
+            return map;
+        }
+
+        activeSlot.options.forEach((option) => {
+            map.set(option.productId, option);
+        });
+
+        return map;
+    }, [activeSlot]);
+
+    const selectedCount = Object.keys(selections).length;
+    const allSlotsSelected = slots.length > 0 && selectedCount === slots.length;
+    const extraPrice = Object.values(selections).reduce((sum, selection) => sum + selection.extraPrice, 0);
+    const finalUnitPrice = combo.price + extraPrice;
+
+    const handleSelectProduct = (product: Product) => {
+        const option = activeOptionByProductId.get(product.id);
+
+        if (!option) {
+            return;
+        }
+
+        setSelectedProduct(product);
+    };
+
+    const handleConfirmSlotSelection = (selectionPayload: {
+        productId: string;
+        productName: string;
+        image: string;
+        size?: string;
+        crust?: string;
+        crustName?: string;
+        sku?: string;
+        extraPrice: number;
+    }) => {
+        if (!activeSlot) {
+            return;
+        }
+
+        const option = activeSlot.options.find((item) => item.productId === selectionPayload.productId);
+        if (!option) {
+            return;
+        }
+
+        const product = productMap.get(selectionPayload.productId);
+        if (!product) {
+            return;
+        }
+
+        setSelections((prev) => ({
+            ...prev,
+            [activeSlotIndex]: {
+                slotName: activeSlot.name,
+                option,
+                product,
+                size: selectionPayload.size,
+                crust: selectionPayload.crust,
+                crustName: selectionPayload.crustName,
+                sku: selectionPayload.sku,
+                extraPrice: selectionPayload.extraPrice,
+            },
+        }));
+
+        if (activeSlotIndex < slots.length - 1) {
+            setActiveSlotIndex((current) => current + 1);
+        }
+
+        toast.success(`Đã chọn ${selectionPayload.productName} cho slot.`);
+    };
+
+    const handleAddComboToCart = () => {
+        if (!allSlotsSelected) {
+            toast.error("Vui lòng chọn đủ sản phẩm cho tất cả slot của combo.");
+            return;
+        }
+
+        const selectedOptions = slots.map((slot, index) => {
+            const selection = selections[index];
+
+            return {
+                k: slot.name,
+                v: selection.product.name,
+                productId: selection.product.id,
+                sku: selection.sku || selection.product.id,
+                crustName: selection.crustName,
+                crustSize: selection.size,
+            };
+        });
+
+        const variantSignature = selectedOptions
+            .map((item) => `${item.productId}:${item.crustName ?? ""}:${item.crustSize ?? ""}`)
+            .join("|");
+
+        addToCart({
+            id: `${combo.id}-${variantSignature}`,
+            productId: combo.id,
+            variantId: variantSignature,
+            name: combo.name,
+            price: finalUnitPrice,
+            image: combo.img,
+            quantity,
+            description: combo.desc,
+            selectedOptions,
+        });
+
+        toast.success("Combo đã được thêm vào giỏ hàng.");
+        router.push(`/`);
+    };
+
+    return (
+        <div className="mx-auto w-full max-w-7xl space-y-5 py-6">
+            <div>
+                <Link href="/" className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-yellow-600">
+                    <ArrowLeft className="h-4 w-4" />
+                    Quay lại menu
+                </Link>
+            </div>
+
+            <div className="grid gap-5 lg:grid-cols-[360px_minmax(0,1fr)]">
+                <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4">
+                    <div className="rounded-xl border border-yellow-100 bg-yellow-50 p-3">
+                        <h1 className="text-xl font-bold text-slate-800">{combo.name}</h1>
+                        <p className="mt-1 whitespace-pre-line text-sm text-slate-600">{combo.desc}</p>
+                        <p className="mt-2 text-sm font-semibold text-yellow-700">
+                            Giá combo: {currencyFormatter.format(combo.price)}
+                        </p>
+                    </div>
+
+                    <div className="flex items-center justify-between rounded-xl border border-slate-200 p-3">
+                        <span className="text-sm font-medium text-slate-700">Số lượng combo</span>
+                        <div className="inline-flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
+                                className="h-9 w-9 rounded-lg border border-slate-300 text-lg font-semibold text-yellow-500"
+                            >
+                                -
+                            </button>
+                            <span className="w-8 text-center text-sm font-semibold">{quantity}</span>
+                            <button
+                                type="button"
+                                onClick={() => setQuantity((prev) => prev + 1)}
+                                className="h-9 w-9 rounded-lg border border-slate-300 text-lg font-semibold text-yellow-500"
+                            >
+                                +
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="space-y-3">
+                        {slots.map((slot, index) => {
+                            const slotSelection = selections[index];
+                            const isActive = activeSlotIndex === index;
+
+                            return (
+                                <button
+                                    type="button"
+                                    key={`${slot.name}-${index}`}
+                                    onClick={() => setActiveSlotIndex(index)}
+                                    className={`w-full rounded-xl border p-3 text-left transition ${isActive ? "border-yellow-400 bg-yellow-50" : "border-slate-200 bg-white hover:border-slate-300"}`}
+                                >
+                                    <div className="flex items-start gap-3">
+                                        <div className="mt-0.5">
+                                            {slotSelection ? (
+                                                <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                                            ) : (
+                                                <Circle className="h-5 w-5 text-slate-300" />
+                                            )}
+                                        </div>
+
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-sm font-semibold text-slate-800">Slot {index + 1}</p>
+                                            <p className="mt-1 text-xs text-slate-600">{slot.name}</p>
+
+                                            <div className="mt-2 flex items-center gap-2">
+                                                <div className="h-12 w-12 overflow-hidden rounded-md bg-slate-100">
+                                                    {slotSelection?.product.img ? (
+                                                        // eslint-disable-next-line @next/next/no-img-element
+                                                        <img src={slotSelection.product.img} alt={slotSelection.product.name} className="h-full w-full object-cover" />
+                                                    ) : (
+                                                        <div className="flex h-full items-center justify-center text-[10px] text-slate-400">Empty</div>
+                                                    )}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="truncate text-xs font-medium text-slate-700">
+                                                        {slotSelection ? slotSelection.product.name : "Chưa chọn sản phẩm"}
+                                                    </p>
+                                                    {slotSelection && (
+                                                        <p className="text-[11px] text-slate-500">
+                                                            {slotSelection.size ? `Size ${slotSelection.size}` : ""}
+                                                            {slotSelection.crustName ? ` • Đế ${slotSelection.crustName}` : ""}
+                                                            {slotSelection.extraPrice > 0 ? ` • +${currencyFormatter.format(slotSelection.extraPrice)}` : ""}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </section>
+
+                <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 p-3">
+                        <div>
+                            <p className="text-sm text-slate-500">Đang chọn</p>
+                            <p className="text-base font-semibold text-slate-800">
+                                {activeSlot ? `Slot ${activeSlotIndex + 1}: ${activeSlot.name}` : "Không có slot"}
+                            </p>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-xs text-slate-500">Giá thêm từ lựa chọn</p>
+                            <p className="text-sm font-semibold text-slate-700">{currencyFormatter.format(extraPrice)}</p>
+                        </div>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                        {activeSlotProducts.map(({ option, product }) => {
+                            const currentSelection = selections[activeSlotIndex];
+                            const isSelected = currentSelection?.product.id === product.id;
+
+                            return (
+                                <div
+                                    key={`${activeSlotIndex}-${product.id}`}
+                                    className={`rounded-2xl border bg-white p-4 transition ${isSelected ? "border-yellow-400 shadow-sm" : "border-slate-200 hover:shadow-md"}`}
+                                >
+                                    <button type="button" onClick={() => handleSelectProduct(product)} className="w-full text-left">
+                                        <div className="flex gap-3">
+                                            <div className="h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-slate-100">
+                                                {product.img ? (
+                                                    // eslint-disable-next-line @next/next/no-img-element
+                                                    <img src={product.img} alt={product.name} className="h-full w-full object-cover" />
+                                                ) : null}
+                                            </div>
+
+                                            <div className="min-w-0 flex-1">
+                                                <p className="line-clamp-2 text-base font-semibold text-slate-800">{product.name}</p>
+                                                <p className="mt-1 line-clamp-2 text-xs text-slate-600">{product.desc}</p>
+                                                <p className="mt-2 text-sm font-semibold text-yellow-600">{currencyFormatter.format(0)}</p>
+                                                {option.sizeRequirement && (
+                                                    <p className="mt-1 text-[11px] text-slate-500">Size bắt buộc: {option.sizeRequirement}</p>
+                                                )}
+                                            </div>
+
+                                            <PlusCircle className="h-8 w-8 fill-yellow-500 text-white" strokeWidth={1} />
+                                        </div>
+                                    </button>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    <div className="sticky bottom-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                        <div className="flex flex-wrap items-center gap-3">
+                            <div className="min-w-55 flex-1">
+                                <p className="text-sm text-slate-500">
+                                    Đã chọn {selectedCount}/{slots.length} slot
+                                </p>
+                                <p className="text-lg font-semibold text-slate-800">
+                                    Tổng tạm tính: {currencyFormatter.format(finalUnitPrice * quantity)}
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={handleAddComboToCart}
+                                disabled={!allSlotsSelected}
+                                className="rounded-lg bg-yellow-500 px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                Thêm combo vào giỏ hàng
+                            </button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <ProductModal
+                product={selectedProduct}
+                open={Boolean(selectedProduct)}
+                onClose={() => setSelectedProduct(null)}
+                isEditing={false}
+                comboConfig={{
+                    requiredSize: activeOptionByProductId.get(selectedProduct?.id || "")?.sizeRequirement || undefined,
+                    hasExistingSelection: Boolean(selections[activeSlotIndex]),
+                    onConfirm: handleConfirmSlotSelection,
+                }}
+            />
+        </div>
+    );
+}
