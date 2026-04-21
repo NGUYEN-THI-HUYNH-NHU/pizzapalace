@@ -127,7 +127,7 @@ export default function OrderPage() {
 
     if (isLoading) {
         return (
-            <div className="mx-auto w-full max-w-5xl py-6">
+            <div className="w-full py-6">
                 <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-500">Đang tải đơn hàng...</p>
             </div>
         );
@@ -135,14 +135,14 @@ export default function OrderPage() {
 
     if (loadError) {
         return (
-            <div className="mx-auto w-full max-w-5xl py-6">
+            <div className="w-full py-6">
                 <p className="rounded-xl bg-rose-50 p-4 text-sm text-rose-700">{loadError}</p>
             </div>
         );
     }
 
     return (
-        <div className="mx-auto w-full max-w-5xl space-y-8 py-6">
+        <div className="w-full space-y-8 py-6">
             <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                 <div className="mb-4 flex items-center justify-between">
                     <h2 className="text-xl font-bold text-slate-800">Đơn hàng đang thực hiện</h2>
@@ -156,7 +156,14 @@ export default function OrderPage() {
                 ) : (
                     <div className="space-y-4">
                         {activeOrders.map((order) => (
-                            <NewOrderCard key={order.id} order={order} />
+                            <NewOrderCard
+                                key={order.id}
+                                order={order}
+                                productCatalog={productCatalog}
+                                onOrderUpdated={(updatedOrder) => {
+                                    setOrders((current) => upsertOrder(current, updatedOrder));
+                                }}
+                            />
                         ))}
                     </div>
                 )}
