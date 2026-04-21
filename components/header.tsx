@@ -107,7 +107,7 @@ const Header = () => {
   }, [isHome, pathname]);
 
   return (
-    <div className="py-3 border-b">
+    <div className="py-3">
       <div className="grid grid-cols-3">
         <div className="flex items-center gap-3">
           <Link href="/" className="font-bold text-xl">

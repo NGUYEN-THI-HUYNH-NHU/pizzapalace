@@ -1,6 +1,8 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import React, { useEffect, useMemo, useState } from "react";
+import { Input } from "@/components/ui/input";
 
 type Ward = {
   name: string;
@@ -31,6 +33,10 @@ type AddressModalProps = {
   onClose?: () => void;
 };
 
+const MapPicker = dynamic(() => import("@/components/map-picker"), {
+  ssr: false,
+});
+
 export default function AddressModal({
   open = false,
   onClose,
@@ -40,7 +46,11 @@ export default function AddressModal({
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [district, setDistrict] = useState("");
-  // Google Maps picker removed — keep simple address + province/district selects
+  const [lat, setLat] = useState<number | null>(null);
+  const [lng, setLng] = useState<number | null>(null);
+  const [resolvingAddress, setResolvingAddress] = useState(false);
+  const [locating, setLocating] = useState(false);
+  const [locationError, setLocationError] = useState("");
   type Suggestion = {
     label: string;
     provinceCode: number;
@@ -74,7 +84,6 @@ export default function AddressModal({
   useEffect(() => {
     const p = provinces.find((p) => String(p.code) === city);
     if (p && p.districts && p.districts.length > 0) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDistrict(String(p.districts[0].code));
     }
   }, [city, provinces]);
@@ -83,7 +92,6 @@ export default function AddressModal({
   useEffect(() => {
     const q = address.trim().toLowerCase();
     if (q.length < 2) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSuggestions([]);
       setShowSuggestions(false);
       return;
@@ -118,13 +126,69 @@ export default function AddressModal({
     setShowSuggestions(list.length > 0);
   }, [address, provinces]);
 
-  // map-related effect removed
+  const handleMapPick = async (nextLat: number, nextLng: number) => {
+    setLat(nextLat);
+    setLng(nextLng);
+    setShowSuggestions(false);
+    setLocationError("");
+    setResolvingAddress(true);
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${nextLat}&lon=${nextLng}`
+      );
+      if (!response.ok) return;
+      const data = (await response.json()) as { display_name?: string };
+      if (data.display_name) {
+        setAddress(data.display_name);
+      } else {
+        setAddress(`${nextLat.toFixed(6)}, ${nextLng.toFixed(6)}`);
+      }
+    } catch {
+      setAddress(`${nextLat.toFixed(6)}, ${nextLng.toFixed(6)}`);
+    } finally {
+      setResolvingAddress(false);
+    }
+  };
+
+  const handleUseCurrentLocation = () => {
+    if (!("geolocation" in navigator)) {
+      setLocationError("Trình duyệt không hỗ trợ định vị vị trí hiện tại.");
+      return;
+    }
+
+    setLocating(true);
+    setLocationError("");
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        void handleMapPick(
+          position.coords.latitude,
+          position.coords.longitude
+        );
+        setLocating(false);
+      },
+      () => {
+        setLocating(false);
+        setLocationError(
+          "Không thể lấy vị trí hiện tại. Vui lòng cấp quyền vị trí rồi thử lại."
+        );
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    );
+  };
 
   const isValid = useMemo(() => {
     if (mode === "delivery")
-      return address.trim().length >= 5 || Boolean(city && district);
+      return (
+        address.trim().length >= 5 ||
+        Boolean(city && district) ||
+        Boolean(lat !== null && lng !== null)
+      );
     return true; // takeaway only needs city/district
-  }, [mode, address, city, district]);
+  }, [mode, address, city, district, lat, lng]);
 
   const handleApply = () => {
     const selectedProvince = provinces.find((p) => String(p.code) === city);
@@ -138,7 +202,10 @@ export default function AddressModal({
       district: district
         ? { code: Number(district), name: selectedDistrict?.name }
         : null,
-      // lat/lng removed
+      coordinates:
+        lat !== null && lng !== null
+          ? { lat, lng }
+          : null,
     };
     try {
       localStorage.setItem("pp_address", JSON.stringify(payload));
@@ -146,6 +213,7 @@ export default function AddressModal({
       window.dispatchEvent(
         new CustomEvent("pp_address_changed", { detail: payload })
       );
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (e) {
       // ignore
     }
@@ -185,7 +253,7 @@ export default function AddressModal({
         </div>
 
         <div style={{ marginTop: 12, position: "relative" }}>
-          <input
+          <Input
             placeholder={
               mode === "delivery"
                 ? "Vui lòng nhập ít nhất 5 ký tự"
@@ -193,8 +261,7 @@ export default function AddressModal({
             }
             value={address}
             onChange={(e) => setAddress(e.target.value)}
-            style={inputStyle}
-            // allow typing for both delivery and takeaway
+            className="mt-2 h-10 border-[#e6e6e6] bg-white"
             disabled={false}
             aria-label="Địa chỉ"
           />
@@ -231,13 +298,8 @@ export default function AddressModal({
                     borderBottom: "1px solid #f3f3f3",
                   }}
                 >
-                  <div
-                    style={{ display: "flex", alignItems: "center", gap: 8 }}
-                  >
-                    <span style={{ color: "#6b7280" }}>📍</span>
-                    <div>
-                      <div style={{ fontSize: 13 }}>{s.label}</div>
-                    </div>
+                  <div>
+                    <div style={{ fontSize: 13 }}>{s.label}</div>
                   </div>
                 </li>
               ))}
@@ -245,16 +307,51 @@ export default function AddressModal({
           )}
           <div
             style={{
-              color: "#e53935",
+              color: "#4b5563",
               marginTop: 8,
               cursor: "default",
+              fontSize: 12,
             }}
           >
-            📍 Chọn vị trí trên bản đồ (bị tắt - không có API key)
+            {resolvingAddress
+              ? "Đang cập nhật địa chỉ từ vị trí đã chọn..."
+              : lat !== null && lng !== null
+                ? `Đã chọn vị trí: ${lat.toFixed(6)}, ${lng.toFixed(6)}`
+                : "Nhấn vào bản đồ để chọn vị trí giao hàng"}
           </div>
         </div>
 
-        {/* Map UI removed */}
+        <div style={{ marginTop: 10, borderRadius: 10, overflow: "hidden" }}>
+          <MapPicker lat={lat} lng={lng} onPick={handleMapPick} />
+        </div>
+
+        <div style={{ marginTop: 8 }}>
+          <button
+            type="button"
+            onClick={handleUseCurrentLocation}
+            disabled={locating}
+            style={{
+              border: "1px solid #e6e6e6",
+              padding: "8px 12px",
+              borderRadius: 8,
+              fontSize: 13,
+              opacity: locating ? 0.6 : 1,
+            }}
+          >
+            {locating ? "Đang lấy vị trí hiện tại..." : "Sử dụng vị trí hiện tại"}
+          </button>
+          {locationError && (
+            <div
+              style={{
+                marginTop: 6,
+                color: "#dc2626",
+                fontSize: 12,
+              }}
+            >
+              {locationError}
+            </div>
+          )}
+        </div>
 
         <div
           style={{
@@ -345,13 +442,6 @@ const descStyle: React.CSSProperties = {
 const radioLabelStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
-};
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "10px 12px",
-  borderRadius: 6,
-  border: "1px solid #e6e6e6",
-  marginTop: 8,
 };
 const selectStyle: React.CSSProperties = {
   flex: 1,

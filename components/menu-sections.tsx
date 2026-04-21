@@ -255,7 +255,7 @@ export default function MenuSections({ sections }: MenuSectionsProps) {
     if (filteredSections.length === 0) {
         return (
             <div>
-                <section className="sticky top-18 z-30 bg-white py-3 border-b">
+                <section className="sticky top-18 z-30 bg-white py-3 border-t border-b">
                     <div className="flex items-center gap-3">
                         <button
                             type="button"
@@ -302,7 +302,7 @@ export default function MenuSections({ sections }: MenuSectionsProps) {
 
     return (
         <div>
-            <section className="sticky top-18 z-30 bg-white py-3 border-b">
+            <section className="sticky top-18 z-30 bg-white py-3 border-t border-b">
                 <div className="flex items-center gap-3">
                     <button
                         type="button"
