@@ -284,7 +284,7 @@ export default function ComboBuilder({ combo, catalog, initialQuantity, editComb
                                                         // eslint-disable-next-line @next/next/no-img-element
                                                         <img src={slotSelection.product.img} alt={slotSelection.product.name} className="h-full w-full object-cover" />
                                                     ) : (
-                                                        <div className="flex h-full items-center justify-center text-[10px] text-slate-400">Empty</div>
+                                                        <div className="flex h-full items-center justify-center text-[10px] text-slate-400">Trống</div>
                                                     )}
                                                 </div>
                                                 <div className="min-w-0">

@@ -67,8 +67,8 @@ const Header = () => {
               ? `${payload.city.name} - ${payload.district?.name ?? ""}`
               : null;
           setAddressText(display);
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (e) {
-          // ignore
         }
       };
 
@@ -83,6 +83,7 @@ const Header = () => {
           handleAddressChanged as EventListener
         );
       };
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (e) {
       // ignore
     }
@@ -106,9 +107,15 @@ const Header = () => {
   }, [isHome, pathname]);
 
   return (
-    <div className="py-3">
+    <div className="py-3 border-b">
       <div className="grid grid-cols-3">
         <div className="flex items-center gap-3">
+          <Link href="/" className="font-bold text-xl">
+            <p className="font-bold text-2xl">PizzaPalace</p>
+          </Link>
+        </div>
+
+        <div className="flex flex-col items-center justify-center">
           <Address
             data={addressText ?? user?.address}
             onClick={() => setShowAddressModal(true)}
@@ -117,12 +124,6 @@ const Header = () => {
             open={showAddressModal}
             onClose={() => setShowAddressModal(false)}
           />
-        </div>
-
-        <div className="flex flex-col items-center justify-center">
-          <Link href="/" className="font-bold text-xl">
-            <p className="font-bold text-2xl">PizzaPalace</p>
-          </Link>
         </div>
 
         <div className="flex items-center justify-end">

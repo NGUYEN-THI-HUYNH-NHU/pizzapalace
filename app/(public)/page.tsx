@@ -22,8 +22,8 @@ const categoryDisplayOrder: Category[] = [
     Category.PIZZA,
     Category.CHICKEN,
     Category.APPETIZER,
-    Category.DRINK,
     Category.COMBO,
+    Category.DRINK,
 ];
 
 export default async function HomePage() {

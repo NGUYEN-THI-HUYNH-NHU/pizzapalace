@@ -8,7 +8,7 @@ const Address: React.FC<AddressProps> = ({ data, onClick }) => {
     <button
       onClick={onClick}
       aria-haspopup="dialog"
-      className="flex flex-col items-start focus:outline-none"
+      className="flex flex-col focus:outline-none"
     >
       <p className="text-gray-700 cursor-pointer">Bạn đang ở đâu?</p>
       <p className={data ? "" : "text-gray-400 cursor-pointer"}>{data || "Chưa có địa chỉ"}</p>

@@ -36,6 +36,23 @@ const renderStatusBadge = (status: OrderStatus) => {
     return <Badge variant="outline" className={cn(colorMap.className)}>{colorMap.label}</Badge>;
 };
 
+const getSelectedOptionLabel = (option: OrderItem['selectedOptions'][number], productCatalog: Record<string, Product | undefined>) => {
+    let label = '';
+
+    if (option.productId) {
+        const productName = productCatalog[option.productId]?.name;
+        if (productName) label = productName;
+    }
+
+    if (!label) label = option.v;
+
+    if (option.crustSize) label += ` - Cỡ ${option.crustSize}`;
+
+    if (option.crustName) label += ` - ${option.crustName}`;
+
+    return label;
+};
+
 const buildRebuyCartItems = (order: Order, productCatalog: Record<string, Product | undefined>) => {
     const merged = new Map<string, CartItem>();
 
@@ -56,6 +73,14 @@ const buildRebuyCartItems = (order: Order, productCatalog: Record<string, Produc
             size: item.crustSize || undefined,
             crust: item.crustName || undefined,
             crustName: item.crustName || undefined,
+            selectedOptions: item.selectedOptions.map((option) => ({
+                k: option.k,
+                v: option.v,
+                sku: option.sku,
+                productId: option.productId || undefined,
+                crustName: option.crustName || undefined,
+                crustSize: option.crustSize || undefined,
+            })),
         };
 
         if (existing) {
@@ -143,7 +168,7 @@ export function OldOrderCard({ order, productCatalog }: OldOrderCardProps) {
             </div>
 
             {open && (
-                <div className="border-t border-gray-100 bg-slate-50/60 px-4 py-4">
+                <div className="border-t border-gray-100 bg-slate-100/80 px-4 py-4">
                     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                         <div className="rounded-xl bg-white p-3">
                             <p className="text-xs text-slate-500">Khách hàng</p>
@@ -193,11 +218,17 @@ export function OldOrderCard({ order, productCatalog }: OldOrderCardProps) {
                                             </div>
 
                                             {item.selectedOptions.length > 0 && (
-                                                <div className="mt-2 flex flex-wrap gap-2">
+                                                <div className="mt-2 flex flex-col gap-2">
                                                     {item.selectedOptions.map((option) => (
-                                                        <span key={`${item.productId}-${option.v}-${option.k}`} className="rounded-full bg-slate-100 px-2 py-1 text-[11px] text-slate-600">
-                                                            {option.k}: {option.v}
-                                                        </span>
+                                                        <div key={`${item.productId}-${option.v}-${option.k}`} className="flex flex-col rounded-sm gap-2 bg-slate-100 px-2 py-1">
+                                                            <span className="text-sm text-slate-500">
+                                                                {option.k}
+                                                            </span>
+                                                            <span className=" text-sm text-slate-900">
+                                                                {getSelectedOptionLabel(option, productCatalog)}
+                                                            </span>
+                                                        </div>
+
                                                     ))}
                                                 </div>
                                             )}
@@ -224,7 +255,8 @@ export function OldOrderCard({ order, productCatalog }: OldOrderCardProps) {
                         </Button>
                     </div>
                 </div>
-            )}
-        </article>
+            )
+            }
+        </article >
     );
 }

@@ -60,13 +60,11 @@ export default function OrderPage() {
 
         const fetchProducts = async () => {
             try {
-                const [pizzas, beverages, combos] = await Promise.all([
-                    fetch('/api/pizzas').then((response) => response.json()).catch(() => []),
-                    fetch('/api/beverages').then((response) => response.json()).catch(() => []),
-                    fetch('/api/combos').then((response) => response.json()).catch(() => []),
-                ]);
+                const catalog = await fetch('/api/product-catalog')
+                    .then((response) => response.json())
+                    .catch(() => []);
 
-                setProducts([...pizzas, ...beverages, ...combos]);
+                setProducts(Array.isArray(catalog) ? catalog : []);
             } catch (error) {
                 console.error('Không thể tải catalog sản phẩm:', error);
             }
