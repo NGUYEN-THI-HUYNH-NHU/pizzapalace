@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { CheckCircle2, Circle, PlusCircle } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -9,6 +9,7 @@ import { useCart } from "@/contexts/cart-context";
 import { currencyFormatter } from "@/lib/utils";
 import { ComboOption, Product } from "@/type";
 import { useRouter } from "next/navigation";
+import Tag from "@/components/ui/tag";
 
 type SlotSelection = {
     slotName: string;
@@ -48,8 +49,10 @@ const normalizeQuantity = (value: number) => {
 export default function ComboBuilder({ combo, catalog, initialQuantity, editComboId }: ComboBuilderProps) {
     const router = useRouter();
     const { addToCart } = useCart();
+    const leftPanelRef = useRef<HTMLElement | null>(null);
     const [activeSlotIndex, setActiveSlotIndex] = useState(0);
     const [quantity] = useState(normalizeQuantity(initialQuantity));
+    const [leftPanelHeight, setLeftPanelHeight] = useState(0);
     const [selections, setSelections] = useState<Record<number, SlotSelection>>({});
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
@@ -110,6 +113,32 @@ export default function ComboBuilder({ combo, catalog, initialQuantity, editComb
             console.error("Failed to restore combo selections:", error);
         }
     }, [editComboId, slots, productMap]);
+
+    useEffect(() => {
+        const el = leftPanelRef.current;
+        if (!el) {
+            return;
+        }
+
+        const updateHeight = () => {
+            setLeftPanelHeight(el.offsetHeight);
+        };
+
+        updateHeight();
+
+        const observer = new ResizeObserver(() => {
+            updateHeight();
+        });
+
+        observer.observe(el);
+        window.addEventListener("resize", updateHeight);
+
+        return () => {
+            observer.disconnect();
+            window.removeEventListener("resize", updateHeight);
+        };
+    }, [slots.length, selections]);
+
     const activeSlot = slots[activeSlotIndex];
 
     const activeSlotProducts = useMemo(() => {
@@ -245,7 +274,7 @@ export default function ComboBuilder({ combo, catalog, initialQuantity, editComb
     return (
         <div className="mx-auto w-full max-w-7xl space-y-5 py-6">
             <div className="grid items-start gap-5 lg:grid-cols-[360px_minmax(0,1fr)]">
-                <section className="flex h-fit self-start flex-col rounded-2xl border border-slate-200 bg-white p-4">
+                <section ref={leftPanelRef} className="flex h-fit self-start flex-col rounded-2xl border border-slate-200 bg-white p-4">
                     <div className="rounded-xl">
                         <h1 className="text-xl font-bold text-slate-800">{combo.name}</h1>
                         <p className="mt-2 text-sm font-semibold text-yellow-600">
@@ -308,7 +337,10 @@ export default function ComboBuilder({ combo, catalog, initialQuantity, editComb
                     </div>
                 </section>
 
-                <section className="flex max-h-[calc(100vh-7rem)] min-h-0 self-start flex-col space-y-4 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4">
+                <section
+                    className="flex min-h-0 self-start flex-col space-y-4 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4"
+                    style={{ maxHeight: leftPanelHeight > 0 ? `${leftPanelHeight}px` : undefined }}
+                >
                     <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 p-3">
                         <div>
                             <p className="text-base font-semibold text-slate-800">
@@ -323,7 +355,7 @@ export default function ComboBuilder({ combo, catalog, initialQuantity, editComb
                         </div>
                     </div>
 
-                    <div className="grid flex-1 min-h-0 gap-4 overflow-y-auto pr-1 md:grid-cols-2">
+                    <div className="grid auto-rows-max content-start gap-4 overflow-y-auto pr-1 2xl:grid-cols-2">
                         {activeSlotProducts.map(({ product }) => {
                             const currentSelection = selections[activeSlotIndex];
                             const isSelected = currentSelection?.product.id === product.id;
@@ -331,33 +363,58 @@ export default function ComboBuilder({ combo, catalog, initialQuantity, editComb
                             return (
                                 <div
                                     key={`${activeSlotIndex}-${product.id}`}
-                                    className={`rounded-2xl border bg-white p-4 transition ${isSelected ? "border-yellow-400 shadow-sm" : "border-slate-200 hover:shadow-md"}`}
+                                    className={`rounded-xl border bg-white overflow-hidden transition cursor-pointer ${isSelected ? "border-yellow-400 shadow-sm" : "border-slate-200 hover:shadow-xl"}`}
+                                    onClick={() => handleSelectProduct(product)}
                                 >
-                                    <button type="button" onClick={() => handleSelectProduct(product)} className="w-full text-left">
-                                        <div className="flex gap-3">
-                                            <div className="h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-slate-100">
-                                                {product.img ? (
-                                                    // eslint-disable-next-line @next/next/no-img-element
-                                                    <img src={product.img} alt={product.name} className="h-full w-full object-cover" />
-                                                ) : null}
-                                            </div>
-
-                                            <div className="min-w-0 flex-1">
-                                                <p className="line-clamp-2 text-base font-semibold text-slate-800">{product.name}</p>
-                                                <p className="mt-1 line-clamp-2 text-xs text-slate-600">{product.desc}</p>
-                                                <p className="mt-2 text-sm font-semibold text-yellow-600">{currencyFormatter.format(0)}</p>
-
-                                            </div>
-
-                                            <PlusCircle className="h-8 w-8 fill-yellow-500 text-white" strokeWidth={1} />
+                                    <div className="flex gap-4 p-4">
+                                        <div className="h-32 w-32 shrink-0 overflow-hidden rounded-xl bg-gray-100 inline-flex justify-center">
+                                            {product.img ? (
+                                                <div
+                                                    className="h-full w-full bg-cover bg-center hover:scale-110 transition-transform duration-300"
+                                                    style={{ backgroundImage: `url(${product.img})` }}
+                                                />
+                                            ) : null}
                                         </div>
-                                    </button>
+
+                                        <div className="flex min-w-0 flex-1 flex-col justify-between">
+                                            <div>
+                                                <h3 className="line-clamp-2 text-lg font-semibold text-gray-700">{product.name}</h3>
+                                                <p className="mt-1 line-clamp-2 text-xs text-gray-600">{product.desc}</p>
+
+                                                {product.tags.length > 0 && (
+                                                    <div className="mt-3 flex flex-wrap gap-2">
+                                                        {product.tags.map((tag) => (
+                                                            <Tag key={tag.code} name={tag.name} color={tag.color} />
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <div className="mt-3 flex items-end justify-between">
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs font-medium text-gray-500">Chỉ từ</span>
+                                                    <span className="text-lg font-bold text-yellow-600">{currencyFormatter.format(0)}</span>
+                                                </div>
+
+                                                <button
+                                                    type="button"
+                                                    className="hover:scale-110 transition-transform"
+                                                    onClick={(event) => {
+                                                        event.stopPropagation();
+                                                        handleSelectProduct(product);
+                                                    }}
+                                                >
+                                                    <PlusCircle className="h-10 w-10 fill-yellow-500 text-white" strokeWidth={1} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             );
                         })}
                     </div>
 
-                    <div className="sticky bottom-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                    <div className="sticky rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
                         <div className="flex flex-wrap items-center gap-3">
                             <div className="min-w-55 flex-1">
                                 <p className="text-sm text-slate-500">

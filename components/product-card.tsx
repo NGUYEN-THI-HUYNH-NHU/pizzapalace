@@ -28,7 +28,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                 onClick={() => setOpen(true)}
             >
                 <div className="flex gap-4 p-4">
-                    <div className="h-48 w-48 shrink overflow-hidden rounded-xl bg-gray-100">
+                    <div className="h-46 w-46 shrink overflow-hidden rounded-xl bg-gray-100">
                         {product.img ? (
                             <div
                                 className="h-full w-full bg-cover bg-center hover:scale-110 transition-transform duration-300"
@@ -39,7 +39,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
                     <div className="flex flex-1 flex-col justify-between">
                         <div>
-                            <h2 className="text-2xl font-semibold text-gray-700">{product.name}</h2>
+                            <h2 className="text-xl font-semibold text-gray-700">{product.name}</h2>
                             <p className="line-clamp-2 text-sm text-gray-600 mt-1 wrap-break-word">
                                 {product.desc}
                             </p>
@@ -57,7 +57,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                             <div className="flex items-end justify-between">
                                 <div className="flex flex-col">
                                     <span className="text-xs text-gray-500 font-medium">Chỉ từ</span>
-                                    <span className="text-2xl font-bold text-gray-700">
+                                    <span className="text-xl font-bold text-gray-700">
                                         {currencyFormatter.format(product.price)}
                                     </span>
                                 </div>

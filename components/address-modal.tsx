@@ -242,7 +242,7 @@ export default function AddressModal({
           <X className="h-5 w-5" />
         </button>
         <div className="flex max-h-[calc(100vh-24px)] flex-col gap-3 overflow-hidden p-4 md:p-6">
-          <h2 className="pr-8 text-center text-2xl font-bold text-foreground">
+          <h2 className="pr-8 text-center text-2xl font-bold text-slate-900">
             TÌM CỬA HÀNG GẦN BẠN NHẤT
           </h2>
           <p className="text-center text-sm text-muted-foreground">
@@ -251,7 +251,7 @@ export default function AddressModal({
           </p>
 
           <div className="flex flex-wrap items-center gap-5">
-            <Label className="cursor-pointer text-base font-medium text-foreground">
+            <Label className="cursor-pointer">
               <input
                 type="radio"
                 name="mode"
@@ -260,7 +260,7 @@ export default function AddressModal({
               />
               <span>Giao hàng tới</span>
             </Label>
-            <Label className="cursor-pointer text-base font-medium text-foreground">
+            <Label className="cursor-pointer">
               <input
                 type="radio"
                 name="mode"
