@@ -137,3 +137,10 @@ button {
     @apply font-sans;
   }
 }
+
+/* Tailwind img reset can break Leaflet tile layout; keep native tile sizing. */
+.leaflet-container .leaflet-tile {
+  max-width: none !important;
+  width: 256px !important;
+  height: 256px !important;
+}

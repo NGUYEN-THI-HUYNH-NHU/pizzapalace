@@ -14,6 +14,7 @@ type MapPickerProps = {
     lat: number | null;
     lng: number | null;
     onPick: (lat: number, lng: number) => void;
+    height?: number;
 };
 
 const DEFAULT_CENTER: [number, number] = [16.0544, 108.2022];
@@ -58,7 +59,7 @@ function ClickHandler({ onPick }: { onPick: (lat: number, lng: number) => void }
     return null;
 }
 
-export default function MapPicker({ lat, lng, onPick }: MapPickerProps) {
+export default function MapPicker({ lat, lng, onPick, height = 220 }: MapPickerProps) {
     const center = useMemo<[number, number]>(
         () => (lat !== null && lng !== null ? [lat, lng] : DEFAULT_CENTER),
         [lat, lng]
@@ -81,7 +82,7 @@ export default function MapPicker({ lat, lng, onPick }: MapPickerProps) {
             zoom={lat !== null && lng !== null ? 16 : 6}
             scrollWheelZoom
             preferCanvas
-            style={{ width: "100%", height: 240, borderRadius: 10 }}
+            style={{ width: "100%", height, borderRadius: 10 }}
         >
             <FixMapInModal />
             <RecenterMap center={center} />

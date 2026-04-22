@@ -1,8 +1,11 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Loader2, MapPin, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 type Ward = {
   name: string;
@@ -33,6 +36,12 @@ type AddressModalProps = {
   onClose?: () => void;
 };
 
+type Suggestion = {
+  label: string;
+  provinceCode: number;
+  districtCode?: number;
+};
+
 const MapPicker = dynamic(() => import("@/components/map-picker"), {
   ssr: false,
 });
@@ -51,11 +60,6 @@ export default function AddressModal({
   const [resolvingAddress, setResolvingAddress] = useState(false);
   const [locating, setLocating] = useState(false);
   const [locationError, setLocationError] = useState("");
-  type Suggestion = {
-    label: string;
-    provinceCode: number;
-    districtCode?: number;
-  };
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
@@ -223,247 +227,133 @@ export default function AddressModal({
   if (!open) return null;
 
   return (
-    <div style={overlayStyle} role="dialog" aria-modal="true">
-      <div style={modalStyle}>
-        <h2 style={titleStyle}>TÌM CỬA HÀNG GẦN BẠN NHẤT</h2>
-        <p style={descStyle}>
-          Nhập địa chỉ của bạn để xem các ưu đãi, phiếu giảm giá và khuyến mại
-          tại địa phương.
-        </p>
-
-        <div style={{ display: "flex", gap: 16, marginTop: 8 }}>
-          <label style={radioLabelStyle}>
-            <input
-              type="radio"
-              name="mode"
-              checked={mode === "delivery"}
-              onChange={() => setMode("delivery")}
-            />
-            <span style={{ marginLeft: 8 }}>Giao hàng tới</span>
-          </label>
-          <label style={radioLabelStyle}>
-            <input
-              type="radio"
-              name="mode"
-              checked={mode === "takeaway"}
-              onChange={() => setMode("takeaway")}
-            />
-            <span style={{ marginLeft: 8 }}>Mua mang về</span>
-          </label>
-        </div>
-
-        <div style={{ marginTop: 12, position: "relative" }}>
-          <Input
-            placeholder={
-              mode === "delivery"
-                ? "Vui lòng nhập ít nhất 5 ký tự"
-                : "Vui lòng nhập địa chỉ hoặc chọn tỉnh/ quận"
-            }
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            className="mt-2 h-10 border-[#e6e6e6] bg-white"
-            disabled={false}
-            aria-label="Địa chỉ"
-          />
-          {showSuggestions && suggestions.length > 0 && (
-            <ul
-              style={{
-                position: "absolute",
-                left: 0,
-                right: 0,
-                top: "calc(100% + 6px)",
-                background: "#fff",
-                border: "1px solid #e6e6e6",
-                borderRadius: 6,
-                maxHeight: 200,
-                overflow: "auto",
-                zIndex: 10000,
-                padding: 0,
-                margin: 0,
-                listStyle: "none",
-              }}
-            >
-              {suggestions.map((s, idx) => (
-                <li
-                  key={idx}
-                  onClick={() => {
-                    setAddress(s.label);
-                    setCity(String(s.provinceCode));
-                    if (s.districtCode) setDistrict(String(s.districtCode));
-                    setShowSuggestions(false);
-                  }}
-                  style={{
-                    padding: "8px 12px",
-                    cursor: "pointer",
-                    borderBottom: "1px solid #f3f3f3",
-                  }}
-                >
-                  <div>
-                    <div style={{ fontSize: 13 }}>{s.label}</div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-          <div
-            style={{
-              color: "#4b5563",
-              marginTop: 8,
-              cursor: "default",
-              fontSize: 12,
-            }}
-          >
-            {resolvingAddress
-              ? "Đang cập nhật địa chỉ từ vị trí đã chọn..."
-              : lat !== null && lng !== null
-                ? `Đã chọn vị trí: ${lat.toFixed(6)}, ${lng.toFixed(6)}`
-                : "Nhấn vào bản đồ để chọn vị trí giao hàng"}
-          </div>
-        </div>
-
-        <div style={{ marginTop: 10, borderRadius: 10, overflow: "hidden" }}>
-          <MapPicker lat={lat} lng={lng} onPick={handleMapPick} />
-        </div>
-
-        <div style={{ marginTop: 8 }}>
-          <button
-            type="button"
-            onClick={handleUseCurrentLocation}
-            disabled={locating}
-            style={{
-              border: "1px solid #e6e6e6",
-              padding: "8px 12px",
-              borderRadius: 8,
-              fontSize: 13,
-              opacity: locating ? 0.6 : 1,
-            }}
-          >
-            {locating ? "Đang lấy vị trí hiện tại..." : "Sử dụng vị trí hiện tại"}
-          </button>
-          {locationError && (
-            <div
-              style={{
-                marginTop: 6,
-                color: "#dc2626",
-                fontSize: 12,
-              }}
-            >
-              {locationError}
-            </div>
-          )}
-        </div>
-
-        <div
-          style={{
-            textAlign: "center",
-            margin: "12px 0",
-            color: "#666",
-          }}
+    <div
+      className="fixed inset-0 z-9999 flex items-center justify-center bg-black/45 p-3"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="relative w-full max-w-2xl overflow-hidden rounded-xl border border-border bg-white shadow-xl">
+        <button
+          type="button"
+          onClick={() => onClose?.()}
+          aria-label="Đóng"
+          className="absolute top-2 right-2 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
-          hoặc
-        </div>
+          <X className="h-5 w-5" />
+        </button>
+        <div className="flex max-h-[calc(100vh-24px)] flex-col gap-3 overflow-hidden p-4 md:p-6">
+          <h2 className="pr-8 text-center text-2xl font-bold text-foreground">
+            TÌM CỬA HÀNG GẦN BẠN NHẤT
+          </h2>
+          <p className="text-center text-sm text-muted-foreground">
+            Nhập địa chỉ của bạn để xem các ưu đãi, phiếu giảm giá và khuyến mại
+            tại địa phương.
+          </p>
 
-        <div style={{ display: "flex", gap: 12 }}>
-          <select
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
-            style={selectStyle}
-          >
-            {provinces.map((p) => (
-              <option key={p.code} value={String(p.code)}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+          <div className="flex flex-wrap items-center gap-5">
+            <Label className="cursor-pointer text-base font-medium text-foreground">
+              <input
+                type="radio"
+                name="mode"
+                checked={mode === "delivery"}
+                onChange={() => setMode("delivery")}
+              />
+              <span>Giao hàng tới</span>
+            </Label>
+            <Label className="cursor-pointer text-base font-medium text-foreground">
+              <input
+                type="radio"
+                name="mode"
+                checked={mode === "takeaway"}
+                onChange={() => setMode("takeaway")}
+              />
+              <span>Mua mang về</span>
+            </Label>
+          </div>
 
-          <select
-            value={district}
-            onChange={(e) => setDistrict(e.target.value)}
-            style={selectStyle}
-          >
-            {(
-              provinces.find((p) => String(p.code) === city)?.districts ?? []
-            ).map((d) => (
-              <option key={d.code} value={String(d.code)}>
-                {d.name}
-              </option>
-            ))}
-          </select>
-        </div>
+          <div className="relative z-50">
+            <Input
+              placeholder={
+                mode === "delivery"
+                  ? "Vui lòng nhập ít nhất 5 ký tự"
+                  : "Vui lòng nhập địa chỉ hoặc chọn tỉnh/quận"
+              }
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              className="h-11 border-border bg-background"
+              aria-label="Địa chỉ"
+            />
+            {showSuggestions && suggestions.length > 0 && (
+              <ul className="absolute right-0 left-0 top-[calc(100%+6px)] z-1000 max-h-52 overflow-auto rounded-md border border-border bg-white shadow-md">
+                {suggestions.map((s, idx) => (
+                  <li
+                    key={idx}
+                    onClick={() => {
+                      setAddress(s.label);
+                      setCity(String(s.provinceCode));
+                      if (s.districtCode) setDistrict(String(s.districtCode));
+                      setShowSuggestions(false);
+                    }}
+                    className="cursor-pointer border-b border-border px-3 py-2 text-sm last:border-b-0 hover:bg-muted"
+                  >
+                    {s.label}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="mt-2 text-xs text-muted-foreground">
+              {resolvingAddress
+                ? "Đang cập nhật địa chỉ từ vị trí đã chọn..."
+                : lat !== null && lng !== null
+                  ? `Đã chọn vị trí: ${lat.toFixed(6)}, ${lng.toFixed(6)}`
+                  : "Nhấn vào bản đồ để chọn vị trí giao hàng"}
+            </p>
+          </div>
 
-        <div style={{ display: "flex", gap: 12, marginTop: 18 }}>
-          <button onClick={() => onClose?.()} style={secondaryBtnStyle}>
-            Huỷ
-          </button>
-          <button
-            onClick={handleApply}
-            disabled={!isValid}
-            style={{ ...primaryBtnStyle, opacity: isValid ? 1 : 0.6 }}
-          >
-            Áp dụng
-          </button>
+          <div className="relative z-0 overflow-hidden rounded-xl border border-border">
+            <MapPicker lat={lat} lng={lng} onPick={handleMapPick} height={190} />
+          </div>
+
+          <div className="space-y-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleUseCurrentLocation}
+              disabled={locating}
+              className="h-10"
+            >
+              {locating ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <MapPin className="h-4 w-4 text-red-600" />
+              )}
+              <span>
+                {locating
+                  ? "Đang lấy vị trí hiện tại..."
+                  : "Sử dụng vị trí hiện tại"}
+              </span>
+            </Button>
+            {locationError && (
+              <p className="text-xs text-destructive">{locationError}</p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 pt-1">
+            <Button type="button" variant="secondary" size="lg" onClick={() => onClose?.()}>
+              Huỷ
+            </Button>
+            <Button
+              type="button"
+              size="lg"
+              onClick={handleApply}
+              disabled={!isValid}
+              className="bg-yellow-500 text-white hover:bg-yellow-600"
+            >
+              Áp dụng
+            </Button>
+          </div>
         </div>
       </div>
     </div>
   );
 }
-
-// --- styles (inline to avoid touching global css) ---
-const overlayStyle: React.CSSProperties = {
-  position: "fixed",
-  inset: 0,
-  background: "rgba(0,0,0,0.45)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  zIndex: 9999,
-};
-
-const modalStyle: React.CSSProperties = {
-  width: 640,
-  background: "#fff",
-  borderRadius: 12,
-  padding: 24,
-  boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
-};
-
-const titleStyle: React.CSSProperties = {
-  textAlign: "center",
-  margin: 0,
-  fontSize: 20,
-  fontWeight: 700,
-};
-const descStyle: React.CSSProperties = {
-  textAlign: "center",
-  fontSize: 13,
-  color: "#666",
-  marginTop: 8,
-};
-const radioLabelStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-};
-const selectStyle: React.CSSProperties = {
-  flex: 1,
-  padding: "10px 12px",
-  borderRadius: 6,
-  border: "1px solid #e6e6e6",
-};
-const primaryBtnStyle: React.CSSProperties = {
-  flex: 1,
-  background: "#f0b100",
-  color: "#fff",
-  border: "none",
-  padding: "10px 14px",
-  borderRadius: 8,
-  cursor: "pointer",
-};
-const secondaryBtnStyle: React.CSSProperties = {
-  flex: 1,
-  background: "#f3f4f6",
-  color: "#111827",
-  border: "none",
-  padding: "10px 14px",
-  borderRadius: 8,
-  cursor: "pointer",
-};
