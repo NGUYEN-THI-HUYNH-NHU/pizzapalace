@@ -22,6 +22,7 @@ export interface CartItem {
     sku: string;
     crustName?: string;
     crustSize?: string;
+    extraPrice?: number;
   }>;
 }
 

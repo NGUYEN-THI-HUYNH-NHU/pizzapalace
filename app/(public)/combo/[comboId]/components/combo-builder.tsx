@@ -29,6 +29,7 @@ type SavedSelectedOption = {
     sku: string;
     crustName?: string;
     crustSize?: string;
+    extraPrice?: number;
 };
 
 type ComboBuilderProps = {
@@ -36,6 +37,7 @@ type ComboBuilderProps = {
     catalog: Product[];
     initialQuantity: number;
     editComboId?: string;
+    editItemId?: string;
 };
 
 const normalizeQuantity = (value: number) => {
@@ -46,9 +48,9 @@ const normalizeQuantity = (value: number) => {
     return Math.max(1, Math.floor(value));
 };
 
-export default function ComboBuilder({ combo, catalog, initialQuantity, editComboId }: ComboBuilderProps) {
+export default function ComboBuilder({ combo, catalog, initialQuantity, editComboId, editItemId }: ComboBuilderProps) {
     const router = useRouter();
-    const { addToCart } = useCart();
+    const { addToCart, removeFromCart } = useCart();
     const leftPanelRef = useRef<HTMLElement | null>(null);
     const [activeSlotIndex, setActiveSlotIndex] = useState(0);
     const [quantity] = useState(normalizeQuantity(initialQuantity));
@@ -103,7 +105,7 @@ export default function ComboBuilder({ combo, catalog, initialQuantity, editComb
                     crust: savedOption.crustName,
                     crustName: savedOption.crustName,
                     sku: savedOption.sku,
-                    extraPrice: 0, // Will recalculate based on variant
+                    extraPrice: savedOption.extraPrice ?? 0,
                 };
             });
 
@@ -176,6 +178,8 @@ export default function ComboBuilder({ combo, catalog, initialQuantity, editComb
     const allSlotsSelected = slots.length > 0 && selectedCount === slots.length;
     const extraPrice = Object.values(selections).reduce((sum, selection) => sum + selection.extraPrice, 0);
     const finalUnitPrice = combo.price + extraPrice;
+    const isEditMode = Boolean(editComboId && editItemId);
+    const activeSlotExtraPrice = selections[activeSlotIndex]?.extraPrice ?? 0;
 
     const handleSelectProduct = (product: Product) => {
         const option = activeOptionByProductId.get(product.id);
@@ -248,12 +252,18 @@ export default function ComboBuilder({ combo, catalog, initialQuantity, editComb
                 sku: selection.sku || selection.product.id,
                 crustName: selection.crustName,
                 crustSize: selection.size,
+                extraPrice: selection.extraPrice,
             };
         });
 
         const variantSignature = selectedOptions
             .map((item) => `${item.productId}:${item.crustName ?? ""}:${item.crustSize ?? ""}`)
             .join("|");
+
+        // If editing, remove old item first
+        if (isEditMode && editItemId) {
+            removeFromCart(editItemId);
+        }
 
         addToCart({
             id: `${combo.id}-${variantSignature}`,
@@ -267,7 +277,7 @@ export default function ComboBuilder({ combo, catalog, initialQuantity, editComb
             selectedOptions,
         });
 
-        toast.success("Combo đã được thêm vào giỏ hàng.");
+        toast.success(isEditMode ? "Combo đã được cập nhật." : "Combo đã được thêm vào giỏ hàng.");
         router.push(`/`);
     };
 
@@ -350,7 +360,7 @@ export default function ComboBuilder({ combo, catalog, initialQuantity, editComb
                         <div className="text-right">
                             <p className="text-xs text-slate-500">
                                 Giá thêm từ lựa chọn:
-                                <span className="text-sm font-semibold text-slate-700"> {currencyFormatter.format(extraPrice)}</span>
+                                <span className="text-sm font-semibold text-slate-700"> {currencyFormatter.format(activeSlotExtraPrice)}</span>
                             </p>
                         </div>
                     </div>
@@ -430,7 +440,7 @@ export default function ComboBuilder({ combo, catalog, initialQuantity, editComb
                                 disabled={!allSlotsSelected}
                                 className="rounded-lg bg-yellow-500 px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                                Thêm combo vào giỏ hàng
+                                {isEditMode ? "Cập nhật combo" : "Thêm combo vào giỏ hàng"}
                             </button>
                         </div>
                     </div>

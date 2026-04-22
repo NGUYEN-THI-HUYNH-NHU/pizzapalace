@@ -25,7 +25,7 @@ export function CartItemComponent({ item, checked, onCheckedChange, product }: C
             if (item.selectedOptions) {
                 localStorage.setItem(`combo-edit-${item.productId}`, JSON.stringify(item.selectedOptions));
             }
-            router.push(`/combo/${item.productId}?quantity=${item.quantity}`);
+            router.push(`/combo/${item.productId}?quantity=${item.quantity}&editItemId=${item.id}`);
         } else {
             setEditOpen(true);
         }

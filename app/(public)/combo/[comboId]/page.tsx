@@ -6,7 +6,7 @@ import ComboBuilder from "./components/combo-builder";
 
 type ComboPageProps = {
     params: Promise<{ comboId: string }>;
-    searchParams: Promise<{ quantity?: string }>;
+    searchParams: Promise<{ quantity?: string; editItemId?: string }>;
 };
 
 const parseQuantity = (value?: string) => {
@@ -37,6 +37,7 @@ export default async function ComboPage({ params, searchParams }: ComboPageProps
             catalog={catalog}
             initialQuantity={parseQuantity(query.quantity)}
             editComboId={comboId}
+            editItemId={query.editItemId}
         />
     );
 }
