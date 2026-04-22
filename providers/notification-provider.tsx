@@ -41,18 +41,24 @@ type RealtimeOrderPayload = {
     };
 };
 
-const STORAGE_KEY = "pizzapalace-order-notifications";
 const MAX_NOTIFICATIONS = 10;
 
 const NotificationContext = createContext<NotificationContextValue | null>(null);
 
-const readNotifications = (): OrderNotification[] => {
+const getStorageKey = (userId: string | null) =>
+    userId ? `pizzapalace-order-notifications:${userId}` : null;
+
+const readNotifications = (storageKey: string | null): OrderNotification[] => {
     if (typeof window === "undefined") {
         return [];
     }
 
+    if (!storageKey) {
+        return [];
+    }
+
     try {
-        const rawValue = window.localStorage.getItem(STORAGE_KEY);
+        const rawValue = window.localStorage.getItem(storageKey);
         if (!rawValue) {
             return [];
         }
@@ -99,8 +105,14 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
             return;
         }
 
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextNotifications));
-    }, []);
+        const storageKey = getStorageKey(userId);
+
+        if (!storageKey) {
+            return;
+        }
+
+        window.localStorage.setItem(storageKey, JSON.stringify(nextNotifications));
+    }, [userId]);
 
     const addNotification = useCallback((input: CreateOrderNotificationInput) => {
         const nextNotification: OrderNotification = {
@@ -129,14 +141,22 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
     }, [commitNotifications]);
 
     useEffect(() => {
+        const storageKey = getStorageKey(userId);
+
         const timeoutId = window.setTimeout(() => {
-            const nextNotifications = readNotifications();
+            if (!storageKey) {
+                notificationsRef.current = [];
+                setNotifications([]);
+                return;
+            }
+
+            const nextNotifications = readNotifications(storageKey);
             notificationsRef.current = nextNotifications;
             setNotifications(nextNotifications);
         }, 0);
 
         const syncFromStorage = () => {
-            const nextNotifications = readNotifications();
+            const nextNotifications = readNotifications(storageKey);
             notificationsRef.current = nextNotifications;
             setNotifications(nextNotifications);
         };
@@ -147,7 +167,7 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
             window.clearTimeout(timeoutId);
             window.removeEventListener("storage", syncFromStorage);
         };
-    }, []);
+    }, [userId]);
 
     useEffect(() => {
         const syncSession = async () => {
@@ -178,6 +198,24 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
             window.removeEventListener("auth-state-changed", handleAuthChanged);
         };
     }, []);
+
+    useEffect(() => {
+        const timeoutId = window.setTimeout(() => {
+            if (userId) {
+                return;
+            }
+
+            notificationsRef.current = [];
+            setNotifications([]);
+
+            socketRef.current?.disconnect();
+            socketRef.current = null;
+        }, 0);
+
+        return () => {
+            window.clearTimeout(timeoutId);
+        };
+    }, [userId]);
 
     useEffect(() => {
         const realtimeUrl = process.env.NEXT_PUBLIC_REALTIME_URL;

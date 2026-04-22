@@ -239,9 +239,9 @@ export default function CheckoutPage() {
         totalAmount: Math.max(0, uniqueCartItems.reduce((sum, item) => sum + item.price * item.quantity, 0) + shippingFee),
       };
 
-      console.log('📦 Gửi dữ liệu đặt hàng:', orderData);
+      console.log('Gửi dữ liệu đặt hàng:', orderData);
       const response = await placeOrder(orderData);
-      console.log('✅ Phản hồi từ server:', response);
+      console.log('Phản hồi từ server:', response);
 
       if (response?.orderId) {
         const selectedIdsForCheckout = new Set(
@@ -254,13 +254,13 @@ export default function CheckoutPage() {
         localStorage.removeItem(selectedCartItemsKey);
         router.push(`/order-success/${response.orderId}`);
       } else {
-        console.error('❌ Không nhận được orderId từ server');
+        console.error('Không nhận được orderId từ server');
         alert('Lỗi: Không nhận được mã đơn hàng từ server.');
       }
     } catch (error) {
-      console.error('❌ Lỗi đặt hàng:', error);
+      console.error('Lỗi đặt hàng:', error);
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('📋 Chi tiết lỗi:', errorMessage);
+      console.error('Chi tiết lỗi:', errorMessage);
       alert(`Có lỗi xảy ra khi đặt hàng: ${errorMessage}`);
     }
   };
