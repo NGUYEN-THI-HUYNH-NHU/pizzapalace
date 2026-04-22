@@ -18,9 +18,40 @@ type OrderData = {
   totalAmount: number;
 };
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = request.nextUrl;
+    const phone = searchParams.get("phone")?.trim() ?? "";
+    const orderId = searchParams.get("orderId")?.trim() ?? "";
     const sessionUser = await getSessionUserFromCookie();
+
+    if (phone || orderId) {
+      const query = new URLSearchParams();
+
+      if (phone) {
+        query.set("phone", phone);
+      }
+
+      if (orderId) {
+        query.set("orderId", orderId);
+      }
+
+      const upstreamResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/orders?${query.toString()}`, {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      const payload = await upstreamResponse.json().catch(() => ({ orders: [] }));
+
+      if (!upstreamResponse.ok) {
+        return NextResponse.json(
+          { message: payload?.message || `Khong the tim don hang (upstream ${upstreamResponse.status}).` },
+          { status: upstreamResponse.status }
+        );
+      }
+
+      return NextResponse.json(payload, { status: 200 });
+    }
 
     if (!sessionUser?.id) {
       return NextResponse.json({ orders: [] }, { status: 200 });

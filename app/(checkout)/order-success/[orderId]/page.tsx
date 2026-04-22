@@ -10,7 +10,7 @@ export default async function OrderSuccessPage({
     const { orderId } = await params;
 
     return (
-        <main className="max-w-[1170px] mx-auto p-4 md:p-6 min-h-screen font-sans text-gray-800 bg-gray-50 md:bg-white">
+        <main className="max-w-292.5 mx-auto p-4 md:p-6 min-h-screen font-sans text-gray-800 bg-gray-50 md:bg-white">
             <div className="bg-white border-0 md:border md:border-gray-200 rounded-2xl p-6 md:p-12 shadow-sm md:shadow-none text-center">
                 <div className="mb-6">
                     <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -29,8 +29,8 @@ export default async function OrderSuccessPage({
 
                 <div className="space-y-3 text-sm text-gray-600 mb-8">
                     <p>• Bạn sẽ nhận được email xác nhận đơn hàng trong vài phút</p>
+                    <p>• Email sẽ có mã đơn hàng và số điện thoại để tra cứu lại bất cứ lúc nào</p>
                     <p>• Thời gian giao hàng dự kiến: 30-45 phút</p>
-                    <p>• Theo dõi đơn hàng qua ứng dụng hoặc website</p>
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
