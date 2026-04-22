@@ -4,6 +4,7 @@ import { jwtVerify, SignJWT } from "jose";
 type SessionUser = {
     id?: string;
     name?: string | null;
+    email?: string | null;
     phone?: string | null;
     address?: string | null;
 };
@@ -30,6 +31,10 @@ const normalizeSessionUser = (value: unknown): SessionUser | null => {
         return null;
     }
 
+    if (!isStringOrNullOrUndefined(payload.email)) {
+        return null;
+    }
+
     if (!isStringOrNullOrUndefined(payload.phone)) {
         return null;
     }
@@ -41,6 +46,7 @@ const normalizeSessionUser = (value: unknown): SessionUser | null => {
     return {
         id: payload.id,
         name: payload.name,
+        email: payload.email,
         phone: payload.phone,
         address: payload.address,
     };
@@ -112,6 +118,7 @@ export const buildSessionCookie = async (user: SessionUser) => {
     const token = await new SignJWT({
         id: normalizedUser.id,
         name: normalizedUser.name ?? null,
+        email: normalizedUser.email ?? null,
         phone: normalizedUser.phone ?? null,
         address: normalizedUser.address ?? null,
     })

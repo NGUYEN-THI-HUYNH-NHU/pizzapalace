@@ -53,11 +53,6 @@ export default function ComboModal({ combo, open, onClose }: ComboModalProps) {
                             <p className="mt-2 whitespace-pre-line text-sm text-gray-600">{combo.desc}</p>
                         </div>
 
-                        <div className="rounded-xl border border-yellow-100 bg-yellow-50 p-4">
-                            <p className="text-sm text-yellow-700">Giá combo gốc</p>
-                            <p className="text-xl font-semibold text-yellow-800">{currencyFormatter.format(combo.price)}</p>
-                        </div>
-
                         <div className="flex items-center gap-3 border-t pt-2">
                             <button
                                 type="button"

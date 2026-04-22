@@ -292,7 +292,7 @@ export default function ComboBuilder({ combo, catalog, initialQuantity, editComb
                                     type="button"
                                     key={`${slot.name}-${index}`}
                                     onClick={() => setActiveSlotIndex(index)}
-                                    className={`w-full rounded-xl border p-3 text-left transition ${isActive ? "border-yellow-400 bg-yellow-50" : "border-slate-200 bg-white hover:border-slate-300"}`}
+                                    className={`w-full rounded-xl border p-2 text-left transition ${isActive ? "border-yellow-400 bg-yellow-50" : "border-slate-200 bg-white hover:border-slate-300"}`}
                                 >
                                     <div className="flex items-start gap-3">
                                         <div className="mt-0.5">
@@ -363,11 +363,11 @@ export default function ComboBuilder({ combo, catalog, initialQuantity, editComb
                             return (
                                 <div
                                     key={`${activeSlotIndex}-${product.id}`}
-                                    className={`rounded-xl border bg-white overflow-hidden transition cursor-pointer ${isSelected ? "border-yellow-400 shadow-sm" : "border-slate-200 hover:shadow-xl"}`}
+                                    className={`rounded-2xl border bg-white overflow-hidden transition cursor-pointer ${isSelected ? "border-yellow-400 shadow-sm" : "border-slate-200 hover:shadow-xl"}`}
                                     onClick={() => handleSelectProduct(product)}
                                 >
-                                    <div className="flex gap-4 p-4">
-                                        <div className="h-32 w-32 shrink-0 overflow-hidden rounded-xl bg-gray-100 inline-flex justify-center">
+                                    <div className="flex gap-4 p-3">
+                                        <div className="h-46 w-46 shrink-0 overflow-hidden rounded-xl bg-gray-100">
                                             {product.img ? (
                                                 <div
                                                     className="h-full w-full bg-cover bg-center hover:scale-110 transition-transform duration-300"
@@ -378,7 +378,7 @@ export default function ComboBuilder({ combo, catalog, initialQuantity, editComb
 
                                         <div className="flex min-w-0 flex-1 flex-col justify-between">
                                             <div>
-                                                <h3 className="line-clamp-2 text-lg font-semibold text-gray-700">{product.name}</h3>
+                                                <h2 className="line-clamp-2 text-xl font-semibold text-gray-700">{product.name}</h2>
                                                 <p className="mt-1 line-clamp-2 text-xs text-gray-600">{product.desc}</p>
 
                                                 {product.tags.length > 0 && (
@@ -390,10 +390,10 @@ export default function ComboBuilder({ combo, catalog, initialQuantity, editComb
                                                 )}
                                             </div>
 
-                                            <div className="mt-3 flex items-end justify-between">
+                                            <div className="flex items-end justify-between">
                                                 <div className="flex flex-col">
                                                     <span className="text-xs font-medium text-gray-500">Chỉ từ</span>
-                                                    <span className="text-lg font-bold text-yellow-600">{currencyFormatter.format(0)}</span>
+                                                    <span className="text-xl font-bold text-yellow-600">{currencyFormatter.format(0)}</span>
                                                 </div>
 
                                                 <button
@@ -404,7 +404,7 @@ export default function ComboBuilder({ combo, catalog, initialQuantity, editComb
                                                         handleSelectProduct(product);
                                                     }}
                                                 >
-                                                    <PlusCircle className="h-10 w-10 fill-yellow-500 text-white" strokeWidth={1} />
+                                                    <PlusCircle className="h-14 w-14 fill-yellow-500 text-white pointer-events-none" strokeWidth={1} />
                                                 </button>
                                             </div>
                                         </div>

@@ -35,10 +35,11 @@ const ProfilePage = () => {
 
         const formData = new FormData(event.currentTarget);
         const name = String(formData.get("name") || "").trim();
+        const email = String(formData.get("email") || "").trim();
         const phone = String(formData.get("phone") || "").trim();
         const address = String(formData.get("address") || "").trim();
 
-        const isUpdated = await updateProfile({ name, phone, address });
+        const isUpdated = await updateProfile({ name, email, phone, address });
 
         if (isUpdated) {
             setIsEditing(false);
@@ -118,6 +119,22 @@ const ProfilePage = () => {
                                     defaultValue={user.phone ?? ""}
                                     placeholder="Nhập số điện thoại"
                                     pattern="(0|\+84)[0-9]{9,10}"
+                                    disabled={!isEditing}
+                                    className="h-11 rounded-xl border-yellow-200 disabled:bg-gray-100 disabled:text-gray-600 disabled:cursor-not-allowed focus-visible:border-yellow-500 focus-visible:ring-yellow-500/30"
+                                    required
+                                />
+                            </FieldContent>
+                        </Field>
+
+                        <Field>
+                            <FieldLabel htmlFor="email">Email</FieldLabel>
+                            <FieldContent>
+                                <Input
+                                    id="email"
+                                    name="email"
+                                    type="email"
+                                    defaultValue={user.email ?? ""}
+                                    placeholder="Nhập email"
                                     disabled={!isEditing}
                                     className="h-11 rounded-xl border-yellow-200 disabled:bg-gray-100 disabled:text-gray-600 disabled:cursor-not-allowed focus-visible:border-yellow-500 focus-visible:ring-yellow-500/30"
                                     required

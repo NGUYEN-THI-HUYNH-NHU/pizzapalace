@@ -1,17 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
+const phonePattern = /^(0|\+84)\d{9,10}$/;
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 const signInSchema = z.object({
-    phone: z
+    identifier: z
         .string()
         .trim()
-        .regex(/^(0|\+84)\d{9,10}$/, "Số điện thoại không hợp lệ."),
+        .refine(
+            (value) => phonePattern.test(value) || emailPattern.test(value),
+            "Email hoặc số điện thoại không hợp lệ."
+        ),
     password: z.string().min(8, "Mật khẩu phải có ít nhất 8 ký tự."),
 });
 
 export async function POST(request: NextRequest) {
     const body = (await request.json().catch(() => null)) as
-        | { phone?: string; password?: string }
+        | { identifier?: string; password?: string }
         | null;
 
     const parsed = signInSchema.safeParse(body);

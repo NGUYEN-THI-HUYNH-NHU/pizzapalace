@@ -27,7 +27,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                 className="rounded-2xl border border-gray-200 bg-white overflow-hidden hover:shadow-xl transition-shadow cursor-pointer"
                 onClick={() => setOpen(true)}
             >
-                <div className="flex gap-4 p-4">
+                <div className="flex gap-4 p-3">
                     <div className="h-46 w-46 shrink overflow-hidden rounded-xl bg-gray-100">
                         {product.img ? (
                             <div

@@ -17,6 +17,7 @@ const PAGE_NAME_MAP: Record<string, string> = {
   "/profile": "HỒ SƠ CỦA TÔI",
   "/profile/change-password": "ĐỔI MẬT KHẨU",
   "/checkout": "THANH TOÁN",
+  "/auth/forgot-password": "QUÊN MẬT KHẨU",
 };
 
 const Header = () => {

@@ -5,17 +5,20 @@ import { useCallback, useState } from "react";
 type LocalUser = {
     id?: string;
     name?: string | null;
+    email?: string | null;
     phone?: string | null;
     address?: string | null;
 };
 
 type UpdateProfileInput = {
     name: string;
+    email: string;
     phone: string;
     address?: string;
 };
 
 const phonePattern = /^(0|\+84)\d{9,10}$/;
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const useProfile = () => {
     const [user, setUser] = useState<LocalUser | null>(null);
@@ -52,7 +55,7 @@ export const useProfile = () => {
     }, []);
 
     const updateProfile = useCallback(
-        async ({ name, phone, address }: UpdateProfileInput) => {
+        async ({ name, email, phone, address }: UpdateProfileInput) => {
             clearError();
 
             if (!user?.id) {
@@ -62,6 +65,11 @@ export const useProfile = () => {
 
             if (!name) {
                 setErrorMessage("Họ tên không được để trống.");
+                return false;
+            }
+
+            if (!emailPattern.test(email.trim())) {
+                setErrorMessage("Email không hợp lệ.");
                 return false;
             }
 
@@ -75,7 +83,7 @@ export const useProfile = () => {
                 const response = await fetch("/api/profile", {
                     method: "PUT",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ name, phone, address }),
+                    body: JSON.stringify({ name, email: email.trim().toLowerCase(), phone, address }),
                 });
 
                 const payload = await response.json().catch(() => ({}));
@@ -88,6 +96,7 @@ export const useProfile = () => {
                 const updatedUser: LocalUser = {
                     ...user,
                     name: payload?.name ?? name,
+                    email: payload?.email ?? email,
                     phone: payload?.phone ?? phone,
                     address: payload?.address ?? address ?? user.address,
                 };

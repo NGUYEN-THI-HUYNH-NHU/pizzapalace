@@ -33,6 +33,7 @@ export async function GET() {
         const hydratedUser = {
             id: sessionUser.id,
             name: payload?.name ?? sessionUser.name ?? null,
+            email: payload?.email ?? sessionUser.email ?? null,
             phone: payload?.phone ?? sessionUser.phone ?? null,
             address: payload?.address ?? sessionUser.address ?? null,
         };
@@ -57,15 +58,21 @@ export async function PUT(request: NextRequest) {
 
     const body = (await request.json().catch(() => null)) as {
         name?: string;
+        email?: string;
         phone?: string;
         address?: string;
     } | null;
     const name = String(body?.name || "").trim();
+    const email = String(body?.email || "").trim().toLowerCase();
     const phone = String(body?.phone || "").trim();
     const address = typeof body?.address === "string" ? body.address.trim() : undefined;
 
     if (!name) {
         return NextResponse.json({ message: "Họ tên không được để trống." }, { status: 400 });
+    }
+
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return NextResponse.json({ message: "Email không hợp lệ." }, { status: 400 });
     }
 
     if (!/^(0|\+84)\d{9,10}$/.test(phone)) {
@@ -78,7 +85,7 @@ export async function PUT(request: NextRequest) {
         const upstreamResponse = await fetch(usersEndpoint, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name, phone, address }),
+            body: JSON.stringify({ name, email, phone, address }),
             cache: "no-store",
         });
 
@@ -98,6 +105,7 @@ export async function PUT(request: NextRequest) {
         const updatedSessionUser = {
             ...sessionUser,
             name: payload?.name ?? name,
+            email: payload?.email ?? email,
             phone: payload?.phone ?? phone,
             address: payload?.address ?? address ?? sessionUser.address,
         };

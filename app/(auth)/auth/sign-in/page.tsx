@@ -10,12 +10,18 @@ import { useAuth } from "@/hooks/use-auth";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 
+const phonePattern = /^(0|\+84)\d{9,10}$/;
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 const signInSchema = z
     .object({
-        phone: z
+        identifier: z
             .string()
             .trim()
-            .regex(/^(0|\+84)\d{9,10}$/, "Số điện thoại không hợp lệ."),
+            .refine(
+                (value) => phonePattern.test(value) || emailPattern.test(value),
+                "Email hoặc số điện thoại không hợp lệ."
+            ),
         password: z.string().min(8, "Mật khẩu phải có ít nhất 8 ký tự.")
     });
 
@@ -31,7 +37,7 @@ export default function SignInPage() {
 
         const formData = new FormData(form);
         const parsed = signInSchema.safeParse({
-            phone: String(formData.get("phone") || ""),
+            identifier: String(formData.get("identifier") || ""),
             password: String(formData.get("password") || ""),
         });
 
@@ -40,9 +46,9 @@ export default function SignInPage() {
             return;
         }
 
-        const { phone, password } = parsed.data;
+        const { identifier, password } = parsed.data;
 
-        const isSignedIn = await signIn({ phone, password });
+        const isSignedIn = await signIn({ identifier, password });
 
         if (!isSignedIn) {
             return;
@@ -66,17 +72,15 @@ export default function SignInPage() {
                 <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
                     <FieldGroup>
                         <Field>
-                            <FieldLabel htmlFor="phone">Số điện thoại</FieldLabel>
+                            <FieldLabel htmlFor="identifier">Email hoặc số điện thoại</FieldLabel>
                             <FieldContent>
                                 <Input
-                                    id="phone"
-                                    name="phone"
-                                    pattern="(0|\+84)[0-9]{9,10}"
+                                    id="identifier"
+                                    name="identifier"
                                     required
-                                    type="tel"
-                                    autoComplete="tel"
-                                    inputMode="numeric"
-                                    placeholder="Ví dụ: 0987654321"
+                                    type="text"
+                                    autoComplete="username"
+                                    placeholder="Ví dụ: 0987654321 hoặc user@example.com"
                                     className="h-11 rounded-xl border-yellow-200 bg-white px-3 text-slate-800 focus-visible:border-yellow-500 focus-visible:ring-yellow-500/30"
                                 />
                             </FieldContent>
@@ -109,6 +113,12 @@ export default function SignInPage() {
                         {isSigningIn ? "Đang đăng nhập..." : "Đăng nhập"}
                     </button>
                 </form>
+
+                <div className="mt-4 text-right">
+                    <Link href="/auth/forgot-password" className="text-sm font-semibold text-yellow-500 hover:text-yellow-600">
+                        Quên mật khẩu?
+                    </Link>
+                </div>
 
                 <p className="mt-5 text-center text-sm text-slate-600">
                     Bạn chưa có tài khoản?{" "}

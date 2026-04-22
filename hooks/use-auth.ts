@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
 type SignInInput = {
-    phone: string;
+    identifier: string;
     password: string;
 };
 
@@ -26,7 +26,7 @@ export const useAuth = () => {
     }, []);
 
     const signIn = useCallback(
-        async ({ phone, password }: SignInInput) => {
+        async ({ identifier, password }: SignInInput) => {
             clearAuthError();
 
             const signInUrl = "/api/auth/sign-in";
@@ -36,7 +36,7 @@ export const useAuth = () => {
                 const response = await fetch(signInUrl, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ phone, password }),
+                    body: JSON.stringify({ identifier, password }),
                 });
 
                 const data = await response.json().catch(() => ({}));
@@ -49,6 +49,7 @@ export const useAuth = () => {
                 const sessionUser = {
                     id: String(data?.id ?? data?.user?.id ?? "").trim(),
                     name: data?.name ?? data?.user?.name ?? null,
+                    email: data?.email ?? data?.user?.email ?? null,
                     phone: data?.phone ?? data?.user?.phone ?? null,
                     address: data?.address ?? data?.user?.address ?? null,
                 };

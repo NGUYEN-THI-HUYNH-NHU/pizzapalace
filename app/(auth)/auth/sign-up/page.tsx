@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 const signUpSchema = z
     .object({
         fullName: z.string().trim().min(1, "Họ tên không được để trống."),
+        email: z.string().trim().email("Email không hợp lệ."),
         phone: z
             .string()
             .trim()
@@ -29,12 +30,14 @@ export default function SignUpPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [values, setValues] = useState({
         fullName: "",
+        email: "",
         phone: "",
         password: "",
         confirmPassword: "",
     });
     const [fieldErrors, setFieldErrors] = useState<Record<keyof typeof values, string>>({
         fullName: "",
+        email: "",
         phone: "",
         password: "",
         confirmPassword: "",
@@ -42,6 +45,7 @@ export default function SignUpPage() {
     const router = useRouter();
 
     const fullNameRef = useRef<HTMLInputElement>(null);
+    const emailRef = useRef<HTMLInputElement>(null);
     const phoneRef = useRef<HTMLInputElement>(null);
     const passwordRef = useRef<HTMLInputElement>(null);
     const confirmPasswordRef = useRef<HTMLInputElement>(null);
@@ -54,6 +58,10 @@ export default function SignUpPage() {
         switch (field) {
             case "fullName":
                 return currentValues.fullName.trim().length > 0 ? "" : "Họ tên không được để trống.";
+            case "email":
+                return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(currentValues.email.trim())
+                    ? ""
+                    : "Email không hợp lệ.";
             case "phone":
                 return /^(0|\+84)\d{9,10}$/.test(currentValues.phone.trim())
                     ? ""
@@ -138,6 +146,7 @@ export default function SignUpPage() {
         if (!parsed.success) {
             const nextFieldErrors: Record<keyof typeof values, string> = {
                 fullName: "",
+                email: "",
                 phone: "",
                 password: "",
                 confirmPassword: "",
@@ -157,7 +166,7 @@ export default function SignUpPage() {
 
         const usersUrl = "/api/auth/sign-up";
 
-        const { fullName, phone, password } = parsed.data;
+        const { fullName, email, phone, password } = parsed.data;
 
         try {
             setIsSubmitting(true);
@@ -169,6 +178,7 @@ export default function SignUpPage() {
                 },
                 body: JSON.stringify({
                     name: fullName,
+                    email,
                     phone,
                     password,
                 }),
@@ -183,12 +193,14 @@ export default function SignUpPage() {
 
             setValues({
                 fullName: "",
+                email: "",
                 phone: "",
                 password: "",
                 confirmPassword: "",
             });
             setFieldErrors({
                 fullName: "",
+                email: "",
                 phone: "",
                 password: "",
                 confirmPassword: "",
@@ -224,11 +236,31 @@ export default function SignUpPage() {
                                     placeholder="Nhập họ và tên"
                                     value={values.fullName}
                                     onChange={(e) => updateValue("fullName", e.target.value)}
-                                    onKeyDown={(e) => handleEnterKey(e, "fullName", phoneRef)}
+                                    onKeyDown={(e) => handleEnterKey(e, "fullName", emailRef)}
                                     aria-invalid={!!fieldErrors.fullName}
                                     className="h-11 rounded-xl border-yellow-200 bg-white px-3 text-slate-800 focus-visible:border-yellow-500 focus-visible:ring-yellow-500/30"
                                 />
                                 <FieldError>{fieldErrors.fullName}</FieldError>
+                            </FieldContent>
+                        </Field>
+
+                        <Field data-invalid={!!fieldErrors.email}>
+                            <FieldLabel htmlFor="email">Email</FieldLabel>
+                            <FieldContent>
+                                <Input
+                                    ref={emailRef}
+                                    id="email"
+                                    name="email"
+                                    type="email"
+                                    autoComplete="email"
+                                    placeholder="Ví dụ: user@example.com"
+                                    value={values.email}
+                                    onChange={(e) => updateValue("email", e.target.value)}
+                                    onKeyDown={(e) => handleEnterKey(e, "email", phoneRef)}
+                                    aria-invalid={!!fieldErrors.email}
+                                    className="h-11 rounded-xl border-yellow-200 bg-white px-3 text-slate-800 focus-visible:border-yellow-500 focus-visible:ring-yellow-500/30"
+                                />
+                                <FieldError>{fieldErrors.email}</FieldError>
                             </FieldContent>
                         </Field>
 
