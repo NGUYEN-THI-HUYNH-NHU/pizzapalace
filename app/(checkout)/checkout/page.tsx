@@ -444,22 +444,36 @@ export default function CheckoutPage() {
             <div className="w-full h-[1px] bg-gray-200 my-4"></div>
 
             <div className="flex flex-col gap-3 pb-4 text-black">
-              {cartItems.length ? cartItems.map((item) => (
-                <div key={item.id} className="flex items-center gap-3">
-                  <img src={item.image || 'https://via.placeholder.com/64'} alt={item.name} className="w-12 h-12 object-cover rounded" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{item.name}</p>
-                    <p className="text-xs text-gray-500">{item.variantId || item.size || item.crust || ''}</p>
-                    <div className="mt-1 flex items-center gap-2">
-                      <button type="button" className="px-2 py-1 border rounded" onClick={() => updateQuantity(item.id, item.quantity - 1)}>-</button>
-                      <span>{item.quantity}</span>
-                      <button type="button" className="px-2 py-1 border rounded" onClick={() => updateQuantity(item.id, item.quantity + 1)}>+</button>
-                      <button type="button" className="text-xs text-red-500" onClick={() => removeCartItem(item.id)}>Xoá</button>
+              {cartItems.length ? cartItems.map((item) => {
+                const hasSelectedOptions = item.selectedOptions && item.selectedOptions.length > 0;
+                return (
+                  <div key={item.id} className="flex items-start gap-3 pb-3 border-b border-gray-100 last:border-b-0">
+                    <img src={item.image || 'https://via.placeholder.com/64'} alt={item.name} className="w-12 h-12 object-cover rounded shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-black">{item.name}</p>
+                      {hasSelectedOptions ? (
+                        <div className="mt-1 space-y-1">
+                          {item.selectedOptions!.map((opt, idx) => (
+                            <p key={idx} className="text-xs text-gray-500 line-clamp-1">
+                              {opt.k}: {opt.v}
+                              {opt.crustSize || opt.crustName ? ` (${opt.crustSize || ''} ${opt.crustName || ''})`.trim() : ''}
+                            </p>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-500">{item.variantId || item.size || item.crust || ''}</p>
+                      )}
+                      <div className="mt-2 flex items-center gap-2">
+                        <button type="button" className="px-2 py-1 border border-gray-300 rounded text-xs hover:bg-gray-100" onClick={() => updateQuantity(item.id, item.quantity - 1)}>-</button>
+                        <span className="text-xs w-6 text-center">{item.quantity}</span>
+                        <button type="button" className="px-2 py-1 border border-gray-300 rounded text-xs hover:bg-gray-100" onClick={() => updateQuantity(item.id, item.quantity + 1)}>+</button>
+                        <button type="button" className="text-xs text-red-500 hover:text-red-700 ml-1" onClick={() => removeCartItem(item.id)}>Xoá</button>
+                      </div>
                     </div>
+                    <p className="text-sm font-semibold text-black shrink-0 text-right">{(item.price * item.quantity).toLocaleString('vi-VN')} ₫</p>
                   </div>
-                  <p className="text-sm font-semibold">{(item.price * item.quantity).toLocaleString('vi-VN')} ₫</p>
-                </div>
-              )) : <p className="text-sm text-gray-500">Giỏ hàng trống.</p>}
+                );
+              }) : <p className="text-sm text-gray-500">Giỏ hàng trống.</p>}
             </div>
 
             <div className="border-t border-gray-200 pt-4 flex justify-between items-center">
