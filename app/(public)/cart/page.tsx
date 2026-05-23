@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
-import { useCart } from '@/contexts/cart-context';
-import { CartItemComponent } from '@/components/cart-item';
-import { OrderSummary } from '@/components/order-summary';
-import { Product } from '@/type';
+import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { useCart } from "@/contexts/cart-context";
+import { CartItemComponent } from "@/components/cart-item";
+import { OrderSummary } from "@/components/order-summary";
+import { Product } from "@/type";
 
-const SELECTED_CART_ITEMS_KEY = 'pizzapalace-selected-cart-item-ids';
+const SELECTED_CART_ITEMS_KEY = "pizzapalace-selected-cart-item-ids";
 
 export default function CartPage() {
   const { cartItems } = useCart();
@@ -17,9 +17,15 @@ export default function CartPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch('/api/pizzas').then(r => r.json()).catch(() => []),
-      fetch('/api/beverages').then(r => r.json()).catch(() => []),
-      fetch('/api/combos').then(r => r.json()).catch(() => []),
+      fetch("/api/pizzas")
+        .then((r) => r.json())
+        .catch(() => []),
+      fetch("/api/beverages")
+        .then((r) => r.json())
+        .catch(() => []),
+      fetch("/api/combos")
+        .then((r) => r.json())
+        .catch(() => []),
     ]).then(([pizzas, beverages, combos]) => {
       setProducts([...pizzas, ...beverages, ...combos]);
     });
@@ -38,9 +44,16 @@ export default function CartPage() {
       try {
         const parsedSelection = JSON.parse(savedSelection);
         if (Array.isArray(parsedSelection)) {
-          const nextSelection = parsedSelection
+          // Keep previously saved selections, but also include any newly added cart items
+          const prevSelection = parsedSelection
             .map((itemId) => String(itemId))
             .filter((itemId) => cartItems.some((item) => item.id === itemId));
+
+          const currentIds = cartItems.map((item) => item.id);
+          const missing = currentIds.filter(
+            (id) => !prevSelection.includes(id),
+          );
+          const nextSelection = [...prevSelection, ...missing];
 
           queueMicrotask(() => {
             if (!hasInitializedSelection.current) {
@@ -71,20 +84,25 @@ export default function CartPage() {
       return;
     }
 
-    localStorage.setItem(SELECTED_CART_ITEMS_KEY, JSON.stringify(selectedItemIds));
+    localStorage.setItem(
+      SELECTED_CART_ITEMS_KEY,
+      JSON.stringify(selectedItemIds),
+    );
   }, [selectedItemIds]);
 
   const selectedItems = useMemo(
     () => cartItems.filter((item) => selectedItemIds.includes(item.id)),
-    [cartItems, selectedItemIds]
+    [cartItems, selectedItemIds],
   );
 
   const selectedSubtotal = useMemo(
-    () => selectedItems.reduce((sum, item) => sum + item.quantity * item.price, 0),
-    [selectedItems]
+    () =>
+      selectedItems.reduce((sum, item) => sum + item.quantity * item.price, 0),
+    [selectedItems],
   );
 
-  const allSelected = cartItems.length > 0 && selectedItemIds.length === cartItems.length;
+  const allSelected =
+    cartItems.length > 0 && selectedItemIds.length === cartItems.length;
 
   const toggleItem = (itemId: string, checked: boolean) => {
     setSelectedItemIds((current) => {
@@ -105,9 +123,16 @@ export default function CartPage() {
       <div className="max-w-7xl mx-auto px-4 py-8">
         {cartItems.length === 0 ? (
           <div className="text-center py-12">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">Giỏ hàng trống</h2>
-            <p className="text-gray-500 mb-8">Hãy thêm một số sản phẩm vào giỏ hàng của bạn</p>
-            <Link href="/" className="inline-block bg-yellow-500 text-white px-6 py-3 rounded-lg hover:bg-yellow-600 transition">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+              Giỏ hàng trống
+            </h2>
+            <p className="text-gray-500 mb-8">
+              Hãy thêm một số sản phẩm vào giỏ hàng của bạn
+            </p>
+            <Link
+              href="/"
+              className="inline-block bg-yellow-500 text-white px-6 py-3 rounded-lg hover:bg-yellow-600 transition"
+            >
               Tiếp tục mua sắm
             </Link>
           </div>
@@ -119,10 +144,20 @@ export default function CartPage() {
                   <div className="flex items-center justify-between gap-3 rounded-2xl py-3">
                     <div>
                       <h2 className="text-lg font-semibold text-gray-900">
-                        Có {cartItems.reduce((sum, item) => sum + item.quantity, 0)} sản phẩm trong giỏ hàng
+                        Có{" "}
+                        {cartItems.reduce(
+                          (sum, item) => sum + item.quantity,
+                          0,
+                        )}{" "}
+                        sản phẩm trong giỏ hàng
                       </h2>
                       <p className="text-sm text-gray-500">
-                        Đã chọn {selectedItems.reduce((sum, item) => sum + item.quantity, 0)} sản phẩm để thanh toán
+                        Đã chọn{" "}
+                        {selectedItems.reduce(
+                          (sum, item) => sum + item.quantity,
+                          0,
+                        )}{" "}
+                        sản phẩm để thanh toán
                       </p>
                     </div>
 
